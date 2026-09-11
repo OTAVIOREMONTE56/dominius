@@ -2767,3 +2767,17 @@ header.game-header {
   #game-screen .piece::before { inset: 12%; }
   #game-screen .medal-symbol { width: 47%; height: 47%; left: 26.5%; }
 }
+
+/* Cenário fixo atrás do #app (z-index: 1), sem interferir no tabuleiro. */
+body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden)))::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(8, 12, 10, .16), rgba(8, 12, 10, .24)),
+    url('assets/terreno/cenario-batalha.png');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
