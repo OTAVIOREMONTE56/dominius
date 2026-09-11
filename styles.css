@@ -2669,3 +2669,101 @@ header.game-header {
   #game-screen .piece { border-width: 1px; }
   #game-screen .piece::before { inset: 2px; }
 }
+
+/* Medalhões imperiais: aro fundido, gravação e face esmaltada. */
+#game-screen .piece {
+  border: 0;
+  padding: 0;
+  background: conic-gradient(from -30deg, #fff0c1, var(--medal-rim) 12%, #54412d 28%,
+    var(--medal-rim) 42%, #fae3ac 52%, #60482f 70%, var(--medal-rim) 87%, #fff0c1);
+  box-shadow: 0 3px 0 #3b2e21, 0 5px 0 #0c0d0c, 0 7px 9px #000b,
+    inset 0 1px 1px #fff8d9, inset 0 -2px 1px #171510;
+}
+#game-screen .piece[data-faction="orcs"] {
+  background: conic-gradient(from -30deg, #e5eeed, #8d9e9f 14%, #303f43 30%, #bbc9c9 49%, #455054 72%, #bdc9c6 91%, #e5eeed);
+}
+#game-screen .piece::before {
+  inset: 12%; border: 1px solid var(--medal-rim); border-radius: 50%;
+  background: radial-gradient(ellipse at 40% 8%, #ffffff36, transparent 45%),
+    repeating-conic-gradient(#0000 0deg 25deg, #0002 26deg 30deg),
+    radial-gradient(circle at 40% 30%, var(--medal-light), var(--medal-dark) 80%);
+  box-shadow: 0 0 0 1px #241b14, 0 0 0 3px #271b1244, inset 0 2px 5px #0009, inset 0 -1px #ffd99344;
+}
+#game-screen .piece::after {
+  inset: 4%; border: 1px dotted #2c251daa;
+  background: linear-gradient(160deg, #fff5d64d, transparent 32% 75%, #0003);
+}
+#game-screen .medal-symbol {
+  position: absolute; width: 49%; height: 49%; top: 17%; left: 25.5%; z-index: 2;
+  color: #f4d797; filter: drop-shadow(0 2px 0 #24140d) drop-shadow(0 -1px 0 #fff1be55);
+  pointer-events: none;
+}
+#game-screen .piece[data-faction="orcs"] .medal-symbol { color: #dae8e5; stroke-width: 3; }
+#game-screen .piece:not(.hidden-piece) .piece-name {
+  position: absolute; bottom: 10%; left: 25%; width: 50%; z-index: 3;
+  font-size: clamp(7px, .85vw, 11px); line-height: 1.1; letter-spacing: 0;
+  padding: 1px 0; background: #100d0bc9; border: 1px solid #b59a5966; border-radius: 3px;
+  color: #fff0c7;
+}
+#game-screen .piece .piece-role { display: none; }
+#game-screen .piece.hidden-piece .piece-name {
+  font-style: italic; font-size: clamp(17px, 2vw, 27px);
+  color: #f1dfb7; text-shadow: 0 2px 0 #150c08, 0 -1px #fff5ce77;
+}
+#game-screen .piece[data-kind="objective"] {
+  outline: 1px solid #ffdea0; outline-offset: 1px;
+  box-shadow: 0 3px #51412c, 0 6px 8px #000b, 0 0 9px #e6bb4f66;
+}
+#game-screen .piece[data-kind="objective"]::before { background: radial-gradient(ellipse at top, #ba923f, #392913 75%); }
+#game-screen .piece[data-kind="trap"]::before { border-style: dashed; background: radial-gradient(ellipse at top, #43453e, #151b18 75%); }
+#game-screen .piece.roman-rank10 .piece-art { inset: 14%; width: 72%; height: 72%; border: 1px solid #ffe0a0; }
+#game-screen .piece.roman-rank10 { outline: 1px solid #ffe3a4; outline-offset: 1px; }
+#game-screen .piece.roman-rank10 .piece-name { margin: 0; bottom: 7%; }
+#game-screen .piece.selected-piece {
+  outline: 2px solid #ffe1a0; outline-offset: 1px;
+  box-shadow: 0 3px #564026, 0 5px 8px #0009, 0 0 0 3px #b88d37, 0 0 18px #ffce6aab;
+}
+#game-screen .top-banner {
+  border: 3px ridge #a58a57;
+  background: repeating-linear-gradient(3deg, #0000 0 5px, #0003 6px 7px), linear-gradient(110deg, #28211a, #0c1210 50%, #27221b);
+  box-shadow: inset 0 0 0 2px #211b13, inset 0 0 0 3px #b6945144, 0 10px 24px #000a;
+}
+#game-screen .player-banner { background: linear-gradient(120deg, #8e283c, #350f1b 75%); border: 2px ridge #c19e64; }
+#game-screen .player-banner-right { background: linear-gradient(240deg, #24546e, #0c202e 75%); border-color: #9eacac; }
+#game-screen .title-banner h1 {
+  background: linear-gradient(#fff4cf, #b18742 48%, #f7d891 52%, #90652e);
+  background-clip: text; -webkit-background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 #4b3018) drop-shadow(0 4px 5px #000); text-shadow: none;
+}
+#game-screen :is(.left-panel, .right-panel) {
+  border: 3px ridge #a58957;
+  background: linear-gradient(135deg, #d4b576 0 5px, transparent 6px) top left / 24px 24px no-repeat,
+    linear-gradient(225deg, #d4b576 0 5px, transparent 6px) top right / 24px 24px no-repeat,
+    linear-gradient(45deg, #a88750 0 5px, transparent 6px) bottom left / 24px 24px no-repeat,
+    linear-gradient(315deg, #a88750 0 5px, transparent 6px) bottom right / 24px 24px no-repeat,
+    repeating-linear-gradient(120deg, #ffffff03 0 2px, #00000003 2px 5px), linear-gradient(125deg, #303632, #0c1110 70%);
+  box-shadow: inset 0 0 0 2px #0b0e0c, inset 0 0 22px #000b, 0 12px 22px #0008;
+}
+#game-screen :is(.left-panel, .right-panel) h2 { color: #efcc87; text-shadow: 0 2px #000; }
+#game-screen .player-card { border-left: 3px solid #8c3a45; background: linear-gradient(120deg, #3a2828, #151b18 85%); }
+#game-screen .player-card:nth-child(2) { border-left-color: #4b8195; background: linear-gradient(120deg, #233945, #141c1e 85%); }
+#game-screen #board {
+  box-shadow: 0 0 0 2px #dfbd78, 0 0 0 5px #463121, 0 0 0 8px #8a643c,
+    0 0 0 10px #241d15, 0 12px 0 7px #171410, 0 20px 35px #000c;
+}
+#game-screen #board::before {
+  background: linear-gradient(135deg, #edd195 0 5px, transparent 6px) top left / 20px 20px no-repeat,
+    linear-gradient(225deg, #edd195 0 5px, transparent 6px) top right / 20px 20px no-repeat,
+    linear-gradient(45deg, #edd195 0 5px, transparent 6px) bottom left / 20px 20px no-repeat,
+    linear-gradient(315deg, #edd195 0 5px, transparent 6px) bottom right / 20px 20px no-repeat;
+}
+#game-screen .lost-pieces-panel { border: 2px ridge #a88b56; box-shadow: inset 0 0 12px #000b, 0 5px 12px #0007; margin-top: 18px; }
+#game-screen .lost-pieces-panel summary { color: #f0d092; background: linear-gradient(90deg, #64503355, #141914, #64503355); text-shadow: 0 2px #000; }
+#game-screen #online-chat { border: 2px ridge #8f784f; background: linear-gradient(#1c2621, #0a100d); }
+#game-screen #online-messages p { box-shadow: inset 0 1px #fff1bf0d, 0 3px 6px #0005; }
+#game-screen #online-chat button { border: 2px ridge #d7ba7c; background: linear-gradient(#f2dca7, #ad8240); }
+@media (max-width: 600px) {
+  #game-screen .piece:not(.hidden-piece) .piece-name { font-size: 7px; padding: 0; bottom: 8%; }
+  #game-screen .piece::before { inset: 12%; }
+  #game-screen .medal-symbol { width: 47%; height: 47%; left: 26.5%; }
+}

@@ -263,6 +263,23 @@ function getVisiblePieceForCell(cellPiece) {
   return cellPiece.playerIndex === getSetupPlayerIndex();
 }
 
+// Ícones de apresentação. Só renderizados para peças cuja identidade está visível.
+function medalIcon(piece) {
+  const icons = {
+    objective: '<path d="M8 27h24M11 25V10l7 6 6-10 6 10V25Z"/>',
+    trap: '<path d="m9 10 22 22M31 10 9 32M10 7v8H6m24-8v8h4M8 27l5 5m14-5 5 5"/><circle cx="20" cy="21" r="5"/>',
+    crown: '<path d="m7 12 7 6 6-10 6 10 7-6-4 17H11ZM11 33h18"/>',
+    sword: '<path d="m27 5 5 2-1 6-15 15-4-4ZM8 22l12 12M8 32l5-5M5 35l3-3"/>',
+    shield: '<path d="m20 5 13 5v11c0 7-8 12-13 15C15 33 7 28 7 21V10ZM20 10v19M13 16h14"/>',
+    scout: '<path d="M12 5c19 8 19 22 0 30l6-15ZM6 20h28m-5-5 5 5-5 5"/>',
+    spy: '<path d="M5 20s6-10 15-10 15 10 15 10-6 10-15 10S5 20 5 20Z"/><circle cx="20" cy="20" r="5"/>',
+  };
+  const kind = piece.isObjective ? 'objective' : piece.isTrap ? 'trap'
+    : piece.rank >= 9 ? 'crown' : piece.rank === 2 ? 'scout' : piece.rank === 1 ? 'spy'
+    : piece.rank >= 6 ? 'sword' : 'shield';
+  return `<svg class="medal-symbol" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[kind]}</svg>`;
+}
+
 function renderBoard() {
   if (visualMotion.freeze) return;
   els.board.innerHTML = '';
@@ -324,6 +341,8 @@ function renderBoard() {
         } else {
           // Atributo apenas visual; nunca revela o tipo das peças ocultas.
           pieceEl.dataset.kind = cell.piece.isObjective ? 'objective' : cell.piece.isTrap ? 'trap' : 'warrior';
+          pieceEl.setAttribute('aria-label', cell.piece.name);
+          pieceEl.title = cell.piece.name;
           const isRomanCesar = cell.piece.factionKey === 'romanos' && cell.piece.roleKey === 'rank10';
 
           if (isRomanCesar) {
@@ -339,6 +358,7 @@ function renderBoard() {
           } else {
             pieceEl.style.setProperty('--piece-image', cell.piece.image ? `url("${cell.piece.image}")` : 'none');
             pieceEl.innerHTML = `
+              ${medalIcon(cell.piece)}
               <span class="piece-name">
                 ${cell.piece.short}
                 <span class="piece-role">${cell.piece.label}</span>
