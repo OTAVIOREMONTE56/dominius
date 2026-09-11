@@ -49,7 +49,7 @@ const PIECE_COUNTS = {
 const FACTIONS = {
   romanos: {
     label: 'Romanos',
-    color: '#5eb5d6',
+    color: '#2868b2',
     names: {
       objective: 'Estandarte Imperial',
       trap: 'Barricada',
@@ -81,7 +81,7 @@ const FACTIONS = {
   },
   orcs: {
     label: 'Orcs',
-    color: '#d6847c',
+    color: '#b33240',
     names: {
       objective: 'Totem de Guerra',
       trap: 'Armadilha Orc',
@@ -113,7 +113,7 @@ const FACTIONS = {
   },
   elfos: {
     label: 'Elfos',
-    color: '#8fd7a6',
+    color: '#299563',
     names: {
       objective: 'Árvore Sagrada',
       trap: 'Raízes Encantadas',
@@ -145,7 +145,7 @@ const FACTIONS = {
   },
   anoes: {
     label: 'Anões',
-    color: '#f0c780',
+    color: '#df812f',
     names: {
       objective: 'Pedra Ancestral',
       trap: 'Carga Rúnica',
@@ -177,7 +177,7 @@ const FACTIONS = {
   },
   egipcios: {
     label: 'Egípcios',
-    color: '#d0c06d',
+    color: '#d6ad38',
     names: {
       objective: 'Olho de Rá',
       trap: 'Maldição',
@@ -536,4 +536,3 @@ function applyBattleResult(attacker, defender, outcome) {
   registerLostPiece(attacker);
   state.board[defenderY][defenderX].piece = defender;
 }
-

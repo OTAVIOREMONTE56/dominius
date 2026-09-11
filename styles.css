@@ -2615,10 +2615,11 @@ header.game-header {
   box-shadow: inset 0 0 0 1px #20170d, inset 0 0 0 3px #e9ca843b,
     inset 0 3px 5px #fff2c729, inset 0 -5px 8px #0009, 0 3px 0 #15130f, 0 5px 7px #0008;
 }
-#game-screen .piece[data-faction="orcs"] { --medal-light: #39677a; --medal-dark: #0b2531; --medal-rim: #aab7b5; }
-#game-screen .piece[data-faction="elfos"] { --medal-light: #4b7b5e; --medal-dark: #122d22; --medal-rim: #b8cda1; }
-#game-screen .piece[data-faction="anoes"] { --medal-light: #8c643e; --medal-dark: #39271d; --medal-rim: #d5ab7b; }
-#game-screen .piece[data-faction="egipcios"] { --medal-light: #927632; --medal-dark: #36321c; --medal-rim: #f0d393; }
+#game-screen .piece[data-faction="romanos"] { --medal-light: #2868b2; --medal-dark: #0b234e; --medal-rim: #dab573; }
+#game-screen .piece[data-faction="orcs"] { --medal-light: #b33240; --medal-dark: #450e19; --medal-rim: #c6a27a; }
+#game-screen .piece[data-faction="elfos"] { --medal-light: #299563; --medal-dark: #0c3826; --medal-rim: #c6c08a; }
+#game-screen .piece[data-faction="anoes"] { --medal-light: #df812f; --medal-dark: #69300e; --medal-rim: #e4b17b; }
+#game-screen .piece[data-faction="egipcios"] { --medal-light: #d6ad38; --medal-dark: #705017; --medal-rim: #f0d393; }
 #game-screen .piece::before {
   border-radius: 50%; inset: 3px;
   border: 1px solid #e6d1a44d;
@@ -2680,7 +2681,7 @@ header.game-header {
     inset 0 1px 1px #fff8d9, inset 0 -2px 1px #171510;
 }
 #game-screen .piece[data-faction="orcs"] {
-  background: conic-gradient(from -30deg, #e5eeed, #8d9e9f 14%, #303f43 30%, #bbc9c9 49%, #455054 72%, #bdc9c6 91%, #e5eeed);
+  background: conic-gradient(from -30deg, #eed4ab, #bd986d 14%, #443124 30%, #d8b181 49%, #544032 72%, #c6a27a 91%, #eed4ab);
 }
 #game-screen .piece::before {
   inset: 12%; border: 1px solid var(--medal-rim); border-radius: 50%;
@@ -2714,8 +2715,8 @@ header.game-header {
   outline: 1px solid #ffdea0; outline-offset: 1px;
   box-shadow: 0 3px #51412c, 0 6px 8px #000b, 0 0 9px #e6bb4f66;
 }
-#game-screen .piece[data-kind="objective"]::before { background: radial-gradient(ellipse at top, #ba923f, #392913 75%); }
-#game-screen .piece[data-kind="trap"]::before { border-style: dashed; background: radial-gradient(ellipse at top, #43453e, #151b18 75%); }
+#game-screen .piece[data-kind="objective"]::before { background: radial-gradient(ellipse at top, #fff0b544, transparent 50%), radial-gradient(ellipse at top, var(--medal-light), var(--medal-dark) 85%); }
+#game-screen .piece[data-kind="trap"]::before { border-style: dashed; background: radial-gradient(ellipse at top, var(--medal-light), var(--medal-dark) 75%); }
 #game-screen .piece.roman-rank10 .piece-art { inset: 14%; width: 72%; height: 72%; border: 1px solid #ffe0a0; }
 #game-screen .piece.roman-rank10 { outline: 1px solid #ffe3a4; outline-offset: 1px; }
 #game-screen .piece.roman-rank10 .piece-name { margin: 0; bottom: 7%; }
@@ -2772,7 +2773,7 @@ header.game-header {
 body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
   background-color: #171b17;
   background-image: linear-gradient(90deg, #080c0a0a, #080c0a55 42%, #080c0a55 58%, #080c0a0a),
-    url('assets/terreno/cenario-batalha.png');
+    url('assets/terreno/cenario-batalha-premium.png');
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -2785,7 +2786,7 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
 #game-screen > .board-shell { box-shadow: none; }
 #game-screen > .board-shell::before { content: none; }
 #game-screen :is(.top-banner, .left-panel, .right-panel, .hud, #setup-controls, .lost-pieces-panel) {
-  background: linear-gradient(135deg, #283029b8, #0d1512c7);
+  background: linear-gradient(135deg, #283029a3, #0d1512b8);
   box-shadow: inset 0 0 0 2px #a88a4933, inset 0 1px #f0d59833, 0 8px 20px #0005;
 }
 #game-screen .player-banner { background: linear-gradient(120deg, #8e283cba, #350f1bb8); }
