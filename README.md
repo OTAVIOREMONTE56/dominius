@@ -30,6 +30,24 @@ No painel do projeto, em Authentication → URL Configuration, configure Site UR
 
 Diagnóstico de conexão: a URL anterior terminava em `iakdbcft` e falhava no DNS (`ENOTFOUND`), causando `Failed to fetch`. O commit anterior já corrigiu para `iakdbctf`. Na verificação de 11/09/2026, a configuração publicada correspondia à local, `/auth/v1/settings` aceitou a publishable key com HTTP 200 e o preflight de `/auth/v1/signup` permitiu a origem do GitHub Pages. Não foi identificado bloqueio atual de CORS. O `index.html` agora versiona a configuração para evitar o cache do endereço antigo. Se o erro persistir, verifique a requisição no navegador afetado e a disponibilidade do projeto; não use `no-cors`, pois Auth precisa ler a resposta.
 
+### Sincronização em tempo real
+
+O adaptador recebe eventos Postgres Changes filtrados pela sala em `matches`, `match_moves`, `room_players`, `rooms` e `chat_messages`. Eventos de partida consultam imediatamente `dominius_snapshot`, que retorna turno, posições, baixas e resultado de forma coerente e sem revelar peças inimigas. O chat consulta seu próprio histórico. `match_pieces` deve continuar fora da publicação.
+
+No SQL Editor do projeto, confira a publicação efetiva:
+
+```sql
+select schemaname, tablename
+from pg_publication_tables
+where pubname = 'supabase_realtime';
+```
+
+As cinco tabelas acima devem constar como `public`. Caso faltem, reexecute o `supabase-setup.sql` inteiro desta versão, que configura publicação e permissões RLS. Isso é necessário para receber eventos, mesmo que as gravações REST/RPC já funcionem. Consulte [Postgres Changes no Supabase](https://supabase.com/docs/guides/realtime/postgres-changes).
+
+O fallback anterior consultava a cada 15 segundos. Agora, o canal conectado mantém apenas reconciliação a cada 60 segundos; falhas de conexão ativam recuperação a cada 3 segundos até a reconexão. Retornar à aba ou recuperar a rede também sincroniza imediatamente. O heartbeat de 15 segundos indica presença. Erros do canal aparecem no console como `DOMINIUS Realtime`, com o motivo disponível. O SDK gerencia a reconexão e renovação do token; sair remove o canal, os timers e invalida callbacks pendentes.
+
+Os testes de dois jogadores desabilitam os timers periódicos para verificar que movimento, turno e chat dependem dos eventos; também verificam reconexão e limpeza ao sair. Não medem a latência da infraestrutura publicada nem substituem a conferência da publicação no painel.
+
 ## Servidor multiplayer legado
 
 1. Ambos os jogadores devem acessar o mesmo servidor. No computador que o executa, use `http://localhost:8000`. Em outro dispositivo da mesma rede, use `http://IP-DO-COMPUTADOR:8000` (a porta precisa estar acessível no firewall).

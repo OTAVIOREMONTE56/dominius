@@ -29,6 +29,7 @@
   const messages=q('online-messages'), input=q('online-message'), chatStatus=q('online-chat-status');
   let user=null,roomId=null,seat=null,last=null,draft=null,channel=null,heartbeat=null,fallback=null;
   let epoch=0,busy=false,refreshRunning=false,refreshAgain=false,boardOpen=false,lastVersion=-1,lastChatId=0,chatBusy=false,pendingChat=null;
+  let attaching=null,chatLoading=false,chatAgain=false,realtimeReady=false;
   const storage={get:key=>{try{return sessionStorage.getItem(key);}catch{return null;}},set:(key,value)=>{try{sessionStorage.setItem(key,value);}catch{}},remove:key=>{try{sessionStorage.removeItem(key);}catch{}}};
   const roomKey=()=>`dominius-supabase-room:${user?.id}`;
   const draftKey=()=>`dominius-supabase-draft:${user?.id}:${roomId}`;
@@ -134,10 +135,13 @@
     finally{refreshRunning=false;if(generation!==epoch&&roomId)refresh();}
   }
   async function loadChat() {
-    if(!roomId)return;const generation=epoch;
+    if(!roomId)return;
+    if(chatLoading){chatAgain=true;return;}
+    chatLoading=true;chatAgain=false;const generation=epoch,id=roomId;
     try {
       const db=await cloud.client();
-      const {data,error}=await db.from('chat_messages').select('id,user_id,body,created_at').eq('room_id',roomId).order('id',{ascending:false}).limit(100);
+      if(generation!==epoch)return;
+      const {data,error}=await db.from('chat_messages').select('id,user_id,body,created_at').eq('room_id',id).order('id',{ascending:false}).limit(100);
       if(error)throw error;if(generation!==epoch)return;
       const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<60;
       for(const row of data.reverse()) {
@@ -151,34 +155,60 @@
       while(messages.children.length>100)messages.firstElementChild.remove();
       if(nearBottom)messages.scrollTop=messages.scrollHeight;
     }catch(error){if(generation===epoch)chatStatus.textContent=error.message;}
+    finally{chatLoading=false;if(roomId&&(chatAgain||generation!==epoch))loadChat();}
   }
-  async function attach(id) {
-    await detach();roomId=id;storage.set(roomKey(),id);lastVersion=-1;
-    const db=await cloud.client(),generation=epoch;
+  function syncNow(){if(roomId){refresh();loadChat();}}
+  function scheduleFallback(ready) {
+    realtimeReady=ready;clearInterval(fallback);
+    // Reconciliação rara quando conectado; recuperação curta apenas sem Realtime.
+    fallback=setInterval(syncNow,ready?60000:3000);
+  }
+  function attach(id) {
+    if(attaching)return attaching;
+    attaching=connectRoom(id).finally(()=>{attaching=null;});
+    return attaching;
+  }
+  async function connectRoom(id) {
+    const cleanup=detach(),generation=epoch;
+    await cleanup;if(generation!==epoch)return;
+    roomId=id;storage.set(roomKey(),id);lastVersion=-1;
+    const db=await cloud.client();if(generation!==epoch)return;
+    const current=()=>generation===epoch&&roomId===id;
+    const changed=()=>{if(current())refresh();};
+    const chatted=()=>{if(current())loadChat();};
+    scheduleFallback(false);
     channel=db.channel(`dominius:${id}:${user.id}`)
-      .on('postgres_changes',{event:'*',schema:'public',table:'matches',filter:`room_id=eq.${id}`},refresh)
-      .on('postgres_changes',{event:'*',schema:'public',table:'room_players',filter:`room_id=eq.${id}`},refresh)
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'rooms',filter:`id=eq.${id}`},refresh)
-      .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages',filter:`room_id=eq.${id}`},loadChat)
-      .subscribe(result=>{
-        if(generation!==epoch)return;
-        if(result==='SUBSCRIBED'){refresh();loadChat();}
-        else if(result==='CHANNEL_ERROR'||result==='TIMED_OUT')message('Reconectando ao chat e à partida…');
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'matches',filter:`room_id=eq.${id}`},changed)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'match_moves',filter:`room_id=eq.${id}`},changed)
+      .on('postgres_changes',{event:'*',schema:'public',table:'room_players',filter:`room_id=eq.${id}`},changed)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'rooms',filter:`id=eq.${id}`},changed)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages',filter:`room_id=eq.${id}`},chatted)
+      .subscribe((result,error)=>{
+        if(!current())return;
+        if(result==='SUBSCRIBED'){scheduleFallback(true);syncNow();}
+        else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(result)) {
+          scheduleFallback(false);syncNow();
+          console.warn('DOMINIUS Realtime:',result,error?.message||'Verifique conexão, publicação supabase_realtime e permissões RLS.');
+        }
       });
-    const pulse=()=>cloud.rpc('dominius_heartbeat',{p_room:id}).catch(()=>{});
+    const pulse=()=>{if(current())cloud.rpc('dominius_heartbeat',{p_room:id}).catch(()=>{});};
     pulse();heartbeat=setInterval(pulse,15000);
-    // Recuperação de eventos perdidos/reconexão. Realtime é o caminho principal.
-    fallback=setInterval(()=>{refresh();loadChat();},15000);
     await refresh();await loadChat();
   }
   async function detach() {
     epoch++;clearInterval(heartbeat);clearInterval(fallback);
-    if(channel){const old=channel;channel=null;const db=await cloud.client();await db.removeChannel(old);}
+    const old=channel;channel=null;realtimeReady=false;chatAgain=false;
     roomId=null;seat=null;last=null;draft=null;lastVersion=-1;lastChatId=0;boardOpen=false;refreshAgain=false;
     toolbar.hidden=true;chat.hidden=true;messages.replaceChildren();input.value='';pendingChat=null;
     els.randomizeBtn.disabled=false;els.confirmArmyBtn.disabled=false;els.restartBtn.textContent='Reiniciar partida';
     actions.hidden=false;q('online-room-info').hidden=true;q('online-account').hidden=false;
+    if(old){const db=await cloud.client();await db.removeChannel(old);}
   }
+  // O navegador móvel pode suspender o socket e os timers em segundo plano.
+  function resume(){if(roomId){syncNow();if(!realtimeReady)scheduleFallback(false);}}
+  window.addEventListener('online',resume);
+  window.addEventListener('pageshow',resume);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')resume();});
   async function leave() {
     if(!roomId)return;
     try{await cloud.rpc('dominius_leave',{p_room:roomId});}
