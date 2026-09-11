@@ -2539,3 +2539,133 @@ header.game-header {
 @media (prefers-reduced-motion: reduce) {
   #start-screen, #start-screen *, #start-screen *::before, #start-screen *::after { animation: none !important; transition: none !important; }
 }
+
+/* Acabamento da batalha: somente apresentação, sem alterar a geometria da grade. */
+#game-screen {
+  --war-gold: #c5a16a;
+  --war-ink: #101514;
+  color: #e7dfce;
+}
+#game-screen :is(.top-banner, .left-panel, .right-panel, .hud, #setup-controls, .lost-pieces-panel) {
+  background: radial-gradient(ellipse at 15% 0, #b18a4220, transparent 60%),
+    repeating-linear-gradient(100deg, #ffffff02 0 1px, transparent 1px 7px),
+    linear-gradient(145deg, #252925, #101514 65%, #191b18);
+  border: 1px solid #927449;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 3px #111512, inset 0 0 0 4px #b8965433,
+    inset 0 2px 18px #0007, 0 12px 28px #0005;
+}
+#game-screen :is(.left-panel, .right-panel) {
+  background-image: linear-gradient(135deg, #d7b375 0 2px, transparent 2px),
+    linear-gradient(225deg, #d7b375 0 2px, transparent 2px),
+    radial-gradient(ellipse at top, #65513426, transparent 65%), linear-gradient(#1d2320, #101413);
+}
+#game-screen :is(h1, h2, h3, .banner-name, .banner-counter, .lost-pieces-panel summary) {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+#game-screen .eyebrow { color: #c5a16a; letter-spacing: .17em; }
+#game-screen .player-banner {
+  border: 1px solid #987749;
+  border-radius: 5px;
+  background: linear-gradient(105deg, #471d24, #241619);
+  box-shadow: inset 0 1px #e8c99533, inset 0 -8px 16px #0005;
+}
+#game-screen .player-banner-right { background: linear-gradient(255deg, #193b4b, #131e28); }
+#game-screen .banner-kicker { color: #d0c1a8; letter-spacing: .12em; }
+#game-screen .banner-name { color: #f3e2bd; }
+#game-screen .banner-counter {
+  color: #ffe3a1;
+  font-size: clamp(1rem, 1.8vw, 1.45rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  background: linear-gradient(#090d0dbb, #211a13cc);
+  border: 1px solid #ac8950;
+  box-shadow: inset 0 2px 6px #0009, 0 1px #e2b87433;
+}
+#game-screen .title-banner h1 {
+  color: #e6c27b;
+  letter-spacing: .08em;
+  text-shadow: 0 1px #fff0b466, 0 3px 0 #4f381c, 0 5px 10px #000;
+}
+#game-screen .title-banner .eyebrow { text-transform: uppercase; }
+#game-screen :is(.player-card, .info-card, .lost-player-group) {
+  background: linear-gradient(140deg, #2a302a, #151b18);
+  border: 1px solid #8a734c66;
+  border-radius: 5px;
+  box-shadow: inset 0 1px #e6c99015, 0 3px 8px #0003;
+}
+#game-screen .player-card.active { border-color: #c9a569; box-shadow: inset 3px 0 #b89351, 0 0 12px #c5a16a12; }
+#game-screen .player-card li { border-color: #ae90502b; }
+#game-screen .player-card strong { color: #f0e1c2; }
+#game-screen #board {
+  box-shadow: 0 0 0 2px #b29258, 0 0 0 5px #32291e, 0 0 0 7px #796344,
+    0 10px 0 4px #141814, 0 18px 26px #0008, inset 0 0 20px #0006;
+}
+#game-screen #board::before {
+  border-image: linear-gradient(135deg, #d5b781, #58452e 22%, #b69763 49%, #30291e 76%, #b99c69) 1;
+}
+#game-screen .piece {
+  --medal-light: #8e3b47;
+  --medal-dark: #350e19;
+  --medal-rim: #dab573;
+  border-radius: 50%;
+  border: 2px solid var(--medal-rim);
+  background: radial-gradient(circle at 35% 23%, var(--medal-light), var(--medal-dark) 76%);
+  color: #fff0ce;
+  box-shadow: inset 0 0 0 1px #20170d, inset 0 0 0 3px #e9ca843b,
+    inset 0 3px 5px #fff2c729, inset 0 -5px 8px #0009, 0 3px 0 #15130f, 0 5px 7px #0008;
+}
+#game-screen .piece[data-faction="orcs"] { --medal-light: #39677a; --medal-dark: #0b2531; --medal-rim: #aab7b5; }
+#game-screen .piece[data-faction="elfos"] { --medal-light: #4b7b5e; --medal-dark: #122d22; --medal-rim: #b8cda1; }
+#game-screen .piece[data-faction="anoes"] { --medal-light: #8c643e; --medal-dark: #39271d; --medal-rim: #d5ab7b; }
+#game-screen .piece[data-faction="egipcios"] { --medal-light: #927632; --medal-dark: #36321c; --medal-rim: #f0d393; }
+#game-screen .piece::before {
+  border-radius: 50%; inset: 3px;
+  border: 1px solid #e6d1a44d;
+  background: linear-gradient(145deg, #fff2cc15, transparent 45%), var(--piece-image, none);
+  background-size: cover;
+}
+#game-screen .piece::after { border-radius: 50%; background: linear-gradient(130deg, #fff9dc12, transparent 42%, #0003); }
+#game-screen .piece .piece-name { font-family: Georgia, serif; font-size: clamp(10px, 1.25vw, 17px); color: #fff1d3; }
+#game-screen .piece .piece-role { font-family: Georgia, serif; font-size: clamp(6px, .6vw, 9px); letter-spacing: 0; }
+#game-screen .piece.hidden-piece .piece-name { font-size: clamp(15px, 1.9vw, 24px); color: #d8cbb0; }
+#game-screen .piece[data-kind="objective"] { border-style: double; border-color: #ffe39d; }
+#game-screen .piece[data-kind="trap"]::before { border-style: dashed; border-color: #dbbd8c; }
+#game-screen .piece.roman-rank10 .piece-art { border-radius: 50%; }
+#game-screen .piece.roman-rank10 .piece-name {
+  opacity: 1; visibility: visible; align-self: flex-end;
+  background: #1d1314d9; border-radius: 4px; padding: 0 3px; margin-bottom: 3px; font-size: 10px;
+}
+#game-screen .piece.roman-rank10 .piece-role { display: none; }
+#game-screen .piece.selected-piece {
+  border-color: #ffe4a1;
+  box-shadow: inset 0 0 0 2px #e7c47666, inset 0 -4px 8px #0008, 0 0 0 2px #6c522d, 0 0 14px #f0c76a99;
+}
+#game-screen #board > .cell.selected > .piece { animation: none; }
+#game-screen #board > .cell.valid-move { box-shadow: inset 0 0 0 2px #cdb781, inset 0 0 16px #d9bd6230; }
+#game-screen #board > .cell.attack-move { box-shadow: inset 0 0 0 2px #c87960, inset 0 0 18px #af413c44; }
+#game-screen #online-chat {
+  background: #0e1513; border-color: #8d754c; border-radius: 5px;
+  box-shadow: inset 0 1px 8px #0008;
+}
+#game-screen #online-chat h3 { letter-spacing: .08em; text-transform: uppercase; font-size: .95rem; }
+#game-screen #online-messages p { background: linear-gradient(120deg, #27312b, #19221d); border-color: #8c734c; }
+#game-screen #online-messages strong { color: #e4c68d; font-size: .85rem; }
+#game-screen #online-messages time { color: #a8ac9e; font-size: .65rem; }
+#game-screen #online-message { background: #080f0c; border-color: #92774c; color: #f1e9d8; box-shadow: inset 0 2px 5px #0009; }
+#game-screen #online-chat button {
+  background: linear-gradient(#e2c48b, #ac8446); color: #21190f;
+  border: 1px solid #efd6a0; border-radius: 4px; text-shadow: none; font-weight: 700;
+  box-shadow: inset 0 1px #fff0c6, 0 3px 6px #0005;
+}
+#game-screen .lost-pieces-panel { margin-top: 12px; }
+#game-screen .lost-pieces-panel summary { text-transform: uppercase; letter-spacing: .12em; font-size: .85rem; }
+#game-screen .lost-pieces-panel .lost-pieces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#game-screen .lost-piece-list li { color: #c9bda8; background: #070e0b33; border-color: #b3975933; font-size: .8rem; }
+#game-screen .lost-player-group { min-width: 0; }
+@media (max-width: 600px) {
+  #game-screen .banner-counter { padding: 5px; font-size: 1rem; }
+  #game-screen .lost-pieces-panel .lost-pieces { grid-template-columns: 1fr; }
+  #game-screen .piece { border-width: 1px; }
+  #game-screen .piece::before { inset: 2px; }
+}

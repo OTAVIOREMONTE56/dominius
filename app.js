@@ -315,12 +315,15 @@ function renderBoard() {
         const pieceEl = document.createElement('div');
         const isSelected = state.selectedPiece && state.selectedPiece.x === cell.x && state.selectedPiece.y === cell.y;
         pieceEl.className = `piece player-${cell.piece.playerIndex + 1}${isSelected ? ' selected-piece' : ''}`;
+        pieceEl.dataset.faction = cell.piece.factionKey || state.players[cell.piece.playerIndex].faction;
 
         if (!getVisiblePieceForCell(cell.piece) && (state.winner === null || state.gameMode === 'online')) {
           pieceEl.classList.add('hidden-piece');
           pieceEl.style.removeProperty('--piece-image');
           pieceEl.innerHTML = '<span class="piece-name">?</span>';
         } else {
+          // Atributo apenas visual; nunca revela o tipo das peças ocultas.
+          pieceEl.dataset.kind = cell.piece.isObjective ? 'objective' : cell.piece.isTrap ? 'trap' : 'warrior';
           const isRomanCesar = cell.piece.factionKey === 'romanos' && cell.piece.roleKey === 'rank10';
 
           if (isRomanCesar) {
