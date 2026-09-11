@@ -331,7 +331,7 @@ function renderBoard() {
       if (cell.piece) {
         const pieceEl = document.createElement('div');
         const isSelected = state.selectedPiece && state.selectedPiece.x === cell.x && state.selectedPiece.y === cell.y;
-        pieceEl.className = `piece player-${cell.piece.playerIndex + 1}${isSelected ? ' selected-piece' : ''}`;
+        pieceEl.className = `piece${isSelected ? ' selected-piece' : ''}`;
         pieceEl.dataset.faction = cell.piece.factionKey || state.players[cell.piece.playerIndex].faction;
 
         if (!getVisiblePieceForCell(cell.piece) && (state.winner === null || state.gameMode === 'online')) {
