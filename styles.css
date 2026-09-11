@@ -2768,16 +2768,37 @@ header.game-header {
   #game-screen .medal-symbol { width: 47%; height: 47%; left: 26.5%; }
 }
 
-/* Cenário fixo atrás do #app (z-index: 1), sem interferir no tabuleiro. */
-body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden)))::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: linear-gradient(rgba(8, 12, 10, .16), rgba(8, 12, 10, .24)),
+/* O body cobre a janela inteira, inclusive fora do #app limitado a 1600px. */
+body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
+  background-color: #171b17;
+  background-image: linear-gradient(90deg, #080c0a0a, #080c0a55 42%, #080c0a55 58%, #080c0a0a),
     url('assets/terreno/cenario-batalha.png');
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+#game-screen,
+#game-screen > .board-shell {
+  background: transparent;
+}
+#game-screen > .board-shell { box-shadow: none; }
+#game-screen > .board-shell::before { content: none; }
+#game-screen :is(.top-banner, .left-panel, .right-panel, .hud, #setup-controls, .lost-pieces-panel) {
+  background: linear-gradient(135deg, #283029b8, #0d1512c7);
+  box-shadow: inset 0 0 0 2px #a88a4933, inset 0 1px #f0d59833, 0 8px 20px #0005;
+}
+#game-screen .player-banner { background: linear-gradient(120deg, #8e283cba, #350f1bb8); }
+#game-screen .player-banner-right { background: linear-gradient(240deg, #24546eba, #0c202eb8); }
+#game-screen :is(.player-card, .info-card, .lost-player-group) {
+  background: linear-gradient(120deg, #28332b88, #10191599);
+}
+#game-screen .player-card:nth-child(2) { background: linear-gradient(120deg, #23394588, #141c1e99); }
+#game-screen #online-chat { background: linear-gradient(#1c262188, #0a100d99); }
+#game-screen .lost-pieces-panel summary { background: linear-gradient(90deg, #64503344, #14191466, #64503344); }
+/* Em navegadores móveis, evitar o recorte instável de background-attachment: fixed. */
+@media (hover: none) and (pointer: coarse) {
+  body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
+    background-attachment: scroll;
+  }
 }
