@@ -20,7 +20,17 @@ Protótipo local de um jogo de estratégia por turnos para navegador, com facç�
 - `server.js`: servidor HTTP e salas multiplayer, sem dependências externas.
 - `multiplayer.js`: conexão, preparação e sincronização dos jogadores.
 
-## Multiplayer
+## Supabase e GitHub Pages
+
+O site publicado usa `supabase-online.js` para salas e `account.js` para contas reais no Supabase. O adaptador antigo `multiplayer.js`, que depende de `/api/multiplayer`, não é carregado pelo `index.html` atual. GitHub Pages não executa esse servidor Node.
+
+A URL deve ser exatamente `https://pvnhfxqvypxxiakdbctf.supabase.co`. Preserve a publishable key desse mesmo projeto em `supabase-config.js`; nunca coloque chaves secretas ou service_role no frontend. A configuração é carregada antes do cliente, que compartilha uma única instância do SDK local `vendor/supabase.js` e persiste/renova a sessão.
+
+No painel do projeto, em Authentication → URL Configuration, configure Site URL e Redirect URLs com `https://otavioremonte56.github.io/dominius/`. Se utilizar também `/dominius/index.html`, autorize esse endereço. Isso permite o retorno dos links de confirmação e recuperação; não é uma configuração de CORS. O cadastro por e-mail deve estar habilitado. Para as salas, execute `supabase-setup.sql` no SQL Editor se ainda não instalou o esquema.
+
+Diagnóstico de conexão: a URL anterior terminava em `iakdbcft` e falhava no DNS (`ENOTFOUND`), causando `Failed to fetch`. O commit anterior já corrigiu para `iakdbctf`. Na verificação de 11/09/2026, a configuração publicada correspondia à local, `/auth/v1/settings` aceitou a publishable key com HTTP 200 e o preflight de `/auth/v1/signup` permitiu a origem do GitHub Pages. Não foi identificado bloqueio atual de CORS. O `index.html` agora versiona a configuração para evitar o cache do endereço antigo. Se o erro persistir, verifique a requisição no navegador afetado e a disponibilidade do projeto; não use `no-cors`, pois Auth precisa ler a resposta.
+
+## Servidor multiplayer legado
 
 1. Ambos os jogadores devem acessar o mesmo servidor. No computador que o executa, use `http://localhost:8000`. Em outro dispositivo da mesma rede, use `http://IP-DO-COMPUTADOR:8000` (a porta precisa estar acessível no firewall).
 2. Clique em **Criar Sala**, escolha seu reino e compartilhe o código com o outro jogador.
@@ -49,4 +59,4 @@ Execute `node --test` (nesta máquina: `.\.tools\node.exe --test`).
 
 ## Observações
 
-O sistema de contas continua sendo uma demonstração local. As salas multiplayer usam sessões temporárias independentes desse cadastro.
+Os modos local e BOT funcionam independentemente da conta e da conexão com o Supabase.

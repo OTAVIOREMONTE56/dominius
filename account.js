@@ -3,6 +3,7 @@
   const dialog=document.getElementById('account-dialog'),view=document.getElementById('account-view'),entry=document.getElementById('account-entry');
   let current=null,mode='login',busy=false;
   const message=text=>{const el=view.querySelector('[role="status"]');if(el)el.textContent=text;};
+  const reportError=error=>message(DominiusCloud.errorMessage(error));
   function draw() {
     entry.textContent=current?'CONTA / PERFIL':'CONTA / ENTRAR';
     if(current&&mode!=='password') {
@@ -25,7 +26,7 @@
   }
   async function open() {
     mode='login';draw();if(!dialog.open)dialog.showModal();
-    try{current=await DominiusCloud.session();draw();}catch(error){message(error.message);}
+    try{current=await DominiusCloud.session();draw();}catch(error){reportError(error);}
   }
   dialog.addEventListener('submit',async event=>{
     event.preventDefault();if(busy)return;
@@ -35,7 +36,7 @@
       const db=await DominiusCloud.client();
       const email=form.elements.email?.value.trim(),password=form.elements.password?.value;
       if(mode==='register') {
-        const {data,error}=await db.auth.signUp({email,password,options:{data:{display_name:form.elements.namedItem('name').value.trim()}}});
+        const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname,data:{display_name:form.elements.namedItem('name').value.trim()}}});
         if(error)throw error;current=data.session;
         if(current)draw();else{form.reset();message('Cadastro recebido. Confira seu e-mail para confirmar a conta e depois entre.');}
       } else if(mode==='recover') {
@@ -48,7 +49,7 @@
         const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;
         current=data.session;draw();
       }
-    }catch(error){message(error.message);}
+    }catch(error){reportError(error);}
     finally{busy=false;button.disabled=false;form.querySelectorAll('[type="password"]').forEach(el=>el.value='');}
   });
   dialog.addEventListener('click',async event=>{
@@ -58,7 +59,7 @@
     if(action==='logout') {
       busy=true;
       try{await window.dominiusMultiplayer?.leave?.();const db=await DominiusCloud.client();const {error}=await db.auth.signOut();if(error)throw error;current=null;mode='login';draw();}
-      catch(error){message(error.message);}finally{busy=false;}
+      catch(error){reportError(error);}finally{busy=false;}
     }else{mode=action;draw();}
   });
   dialog.addEventListener('close',()=>view.querySelectorAll('[type="password"]').forEach(el=>el.value=''));

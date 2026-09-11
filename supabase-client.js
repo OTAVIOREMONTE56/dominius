@@ -1,9 +1,19 @@
 (() => {
   let pending;
   const config=window.DOMINIUS_SUPABASE||{};
-  const configured=/^https:\/\//.test(config.SUPABASE_URL||'')&&/^sb_publishable_/.test(config.SUPABASE_PUBLISHABLE_KEY||'');
+  const expectedUrl='https://pvnhfxqvypxxiakdbctf.supabase.co';
+  const configurationError=config.SUPABASE_URL!==expectedUrl
+    ? `Configuração online inválida: SUPABASE_URL deve ser ${expectedUrl}. Atualize a página para carregar a configuração atual.`
+    : !/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.SUPABASE_PUBLISHABLE_KEY||'')
+      ? 'Configure uma SUPABASE_PUBLISHABLE_KEY válida em supabase-config.js. Nunca use uma chave secreta no navegador.' : '';
+  const configured=!configurationError;
+  function errorMessage(error) {
+    if(/failed to fetch|fetch failed|networkerror|network request failed|load failed/i.test(error?.message||''))
+      return 'Não foi possível alcançar o Supabase. Verifique sua conexão e bloqueadores de rede e atualize a página. Se persistir, confira se o projeto está ativo no painel do Supabase.';
+    return error?.message||'Não foi possível concluir a operação online.';
+  }
   async function client() {
-    if(!configured) throw new Error('Configure SUPABASE_PUBLISHABLE_KEY em supabase-config.js para entrar online.');
+    if(!configured) throw new Error(configurationError);
     if(!pending) pending=(async()=>{
       if(!window.supabase) await new Promise((resolve,reject)=>{
         const script=document.createElement('script');script.src='vendor/supabase.js';script.onload=resolve;
@@ -21,5 +31,5 @@
   }
   async function session() {const db=await client();const {data,error}=await db.auth.getSession();if(error)throw error;return data.session;}
   async function rpc(name,args) {const db=await client();const {data,error}=await db.rpc(name,args);if(error)throw new Error(error.message);return data;}
-  window.DominiusCloud={client,session,rpc,configured};
+  window.DominiusCloud={client,session,rpc,configured,errorMessage};
 })();
