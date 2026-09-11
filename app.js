@@ -301,7 +301,7 @@ function renderBoard() {
         const isSelected = state.selectedPiece && state.selectedPiece.x === cell.x && state.selectedPiece.y === cell.y;
         pieceEl.className = `piece player-${cell.piece.playerIndex + 1}${isSelected ? ' selected-piece' : ''}`;
 
-        if (!getVisiblePieceForCell(cell.piece) && state.winner === null) {
+        if (!getVisiblePieceForCell(cell.piece) && (state.winner === null || state.gameMode === 'online')) {
           pieceEl.classList.add('hidden-piece');
           pieceEl.style.removeProperty('--piece-image');
           pieceEl.innerHTML = '<span class="piece-name">?</span>';

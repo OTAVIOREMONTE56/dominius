@@ -6,6 +6,7 @@
     <title>DOMINIUS</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="account.css" />
+    <link rel="stylesheet" href="supabase-online.css" />
   </head>
   <body>
     <div id="app">
@@ -43,10 +44,8 @@
             <span class="menu-panel-mark" aria-hidden="true">♜</span>
             <p class="menu-kicker">ALÉM DAS FRONTEIRAS</p>
             <h2 id="multiplayer-heading">MULTIPLAYER</h2>
-            <button class="menu-button" type="button" disabled><span>Criar Sala</span><small>Em breve</small></button>
-            <button class="menu-button" type="button" disabled><span>Entrar em Sala</span><small>Em breve</small></button>
-            <button class="menu-button" type="button" disabled><span>Partida Rápida</span><small><span aria-hidden="true">◇</span> Em breve</small></button>
-            <p class="menu-panel-foot">Novas alianças virão.</p>
+            <button id="online-entry" class="menu-button menu-button-featured" type="button" aria-haspopup="dialog" aria-controls="online-lobby"><span>BATALHA ONLINE</span><small>Crie uma sala e convide seu adversário</small></button>
+            <p class="menu-panel-foot">Dois comandantes. Uma batalha entre reinos.</p>
           </section>
         </div>
         <div class="menu-realms" aria-label="Os cinco reinos">
@@ -60,7 +59,7 @@
           </ul>
         </div>
         <footer class="menu-footer" aria-label="Opções adicionais">
-          <button id="account-profile-link" type="button" data-account-open aria-haspopup="dialog" aria-controls="account-dialog">PERFIL<small>Demo local</small></button>
+          <button id="account-profile-link" type="button" data-account-open aria-haspopup="dialog" aria-controls="account-dialog">PERFIL<small>Conta online</small></button>
           <button type="button" disabled>AMIGOS<small>Em breve</small></button>
           <span class="menu-footer-seal" aria-hidden="true">◆</span>
           <button type="button" disabled>RANKING<small>Em breve</small></button>
@@ -214,14 +213,14 @@
         </aside>
       </section>
 
-      <!-- Protótipo local: não autentica usuários nem se comunica com um backend. -->
+      <!-- Conta Supabase independente dos modos local e BOT. -->
       <dialog id="account-dialog" aria-labelledby="account-view-title" aria-describedby="account-demo-notice">
         <button class="account-close" type="button" data-account-action="close" aria-label="Fechar área do comandante">×</button>
         <header class="account-brand">
           <p class="account-wordmark">DOMINIUS</p>
           <p class="account-kicker">ÁREA DO COMANDANTE</p>
         </header>
-        <p id="account-demo-notice" class="account-demo-notice"><strong>DEMONSTRAÇÃO LOCAL</strong> Sem autenticação online. Use somente dados fictícios. Nenhum dado é enviado ou salvo; o perfil desaparece ao recarregar.</p>
+        <p id="account-demo-notice" class="account-demo-notice">Entre com sua conta para disputar batalhas online. Os modos local e BOT continuam disponíveis sem login.</p>
         <div id="account-view"></div>
       </dialog>
       <div id="end-screen" class="end-screen hidden" aria-live="polite">
@@ -248,7 +247,9 @@
     <script src="bot.js"></script>
     <script src="game-rules.js"></script>
     <script src="app.js"></script>
-    <script src="multiplayer.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-client.js"></script>
     <script src="account.js"></script>
+    <script src="supabase-online.js"></script>
   </body>
 </html>

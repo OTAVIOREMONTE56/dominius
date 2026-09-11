@@ -1,6 +1,18 @@
 {
   "name": "dominius",
   "private": true,
-  "scripts": {"start": "node server.js", "test": "node --test"},
-  "engines": {"node": ">=22"}
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "jsdom": "^26.1.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4"
+  }
 }

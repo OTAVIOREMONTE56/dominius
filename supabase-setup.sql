@@ -140,19 +140,30 @@ begin
   return r;
 end $$;
 
-create table if not exists dominius_private.join_attempts (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  attempted_at timestamptz not null default now()
-);
-revoke all on dominius_private.join_attempts from public,anon,authenticated;
 -- A sala exige código aleatório, não pode ser enumerada pelo REST.
+create table if not exists dominius_private.join_limits (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  window_start timestamptz not null default now(),
+  attempts integer not null default 0
+);
+revoke all on dominius_private.join_limits from public,anon,authenticated;
 create or replace function public.dominius_join_room(p_code text,p_faction text) returns uuid
 language plpgsql security definer set search_path = '' as $$
-declare r public.rooms; uid uuid:=auth.uid();
+declare r public.rooms; uid uuid:=auth.uid(); n integer;
 begin
   if uid is null then raise exception 'Entre na sua conta.'; end if;
-  select * into r from public.rooms where code=upper(btrim(p_code)) for update;
-  if not found then raise exception 'Sala não encontrada.'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(uid::text,2));
+  insert into dominius_private.join_limits(user_id) values(uid) on conflict do nothing;
+  update dominius_private.join_limits set
+    attempts=case when window_start<now()-interval '1 minute' then 1 else attempts+1 end,
+    window_start=case when window_start<now()-interval '1 minute' then now() else window_start end
+    where user_id=uid returning attempts into n;
+  -- Retornar NULL mantém o contador de tentativas; RAISE desfaria a transação.
+  if n>12 then return null; end if;
+  select * into r from public.rooms where code=upper(btrim(p_code));
+  if not found then return null; end if;
+  perform 1 from public.matches where room_id=r.id for update;
+  select * into r from public.rooms where id=r.id for update;
   if exists(select 1 from public.room_players where room_id=r.id and user_id=uid) then return r.id; end if;
   if r.status<>'waiting' or (select count(*) from public.room_players where room_id=r.id)>=2 then
     raise exception 'Esta sala não está disponível.';
@@ -271,7 +282,7 @@ begin
         case when p.lost then jsonb_build_object('role',p.role) else '{}'::jsonb end end order by p.id)
       from public.match_pieces p where p.match_id=m.id and (p.owner_id=auth.uid() or m.phase in ('battle','finished'))),'[]'::jsonb),
     'moves',coalesce((select jsonb_agg(to_jsonb(mm) order by mm.id) from
-      (select id,event,created_at from public.match_moves where match_id=m.id order by id desc limit 10) mm),'[]'::jsonb))
+      (select id,turn_number,event,created_at from public.match_moves where match_id=m.id order by id desc limit 10) mm),'[]'::jsonb))
     into result from public.rooms r where r.id=p_room;
   return result;
 end $$;

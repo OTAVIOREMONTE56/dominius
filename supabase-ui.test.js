@@ -1,0 +1,88 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {JSDOM,VirtualConsole}=require('jsdom');
+const {PGlite}=require('@electric-sql/pglite');
+test('two DOM clients: local/BOT preserved, online preparation, chat, movement and restoration',async()=>{
+  const db=new PGlite(),pages=[],subscriptions=[];let queue=Promise.resolve();
+  const uids=['20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002'];
+  const execute=(uid,sql,params=[])=>{
+    const work=queue.then(async()=>{
+      await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[uid]);await db.exec('set role authenticated');
+      return db.query(sql,params);
+    });queue=work.catch(()=>{});return work;
+  };
+  const keys={dominius_create_room:['p_faction'],dominius_join_room:['p_code','p_faction'],dominius_snapshot:['p_room'],
+    dominius_confirm_army:['p_room','p_pieces'],dominius_move:['p_room','p_piece','p_x','p_y','p_version','p_request'],
+    dominius_chat:['p_room','p_body','p_request'],dominius_heartbeat:['p_room'],dominius_leave:['p_room']};
+  const until=async(fn,label)=>{for(let i=0;i<200;i++){if(fn())return;await new Promise(r=>setTimeout(r,10));}throw Error(label);};
+  const errors=[];
+  async function page(index) {
+    const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));
+    const dom=new JSDOM(fs.readFileSync('index.html','utf8').replace(/<script[^>]*src=[^>]+><\/script>/g,''),{url:'http://localhost:8000/',runScripts:'dangerously',virtualConsole:console});
+    pages.push(dom);const w=dom.window;
+    w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
+    w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
+    w.audioManager={unlock(){},playAmbient(){},stopAmbient(){},playPassos(){},playEspadas(){},playVitoria(){},playDerrota(){},playDesarme(){},playExplosao(){}};
+    w.matchMedia=()=>({matches:true});
+    const user={id:uids[index],email:`player${index}@example.test`};
+    const mock={
+      channel(){const callbacks=[];const channel={on(type,filter,callback){callbacks.push({filter,callback});return channel;},subscribe(callback){subscriptions.push({channel,callbacks});setTimeout(()=>callback('SUBSCRIBED'),0);return channel;}};return channel;},
+      removeChannel(channel){const i=subscriptions.findIndex(s=>s.channel===channel);if(i>=0)subscriptions.splice(i,1);return Promise.resolve();},
+      from(){let room;const query={select(){return query;},eq(k,v){room=v;return query;},order(){return query;},limit(){return execute(user.id,'select id,user_id,body,created_at from public.chat_messages where room_id=$1 order by id desc limit 100',[room]).then(r=>({data:r.rows,error:null}));}};return query;},
+    };
+    w.DominiusCloud={configured:true,session:async()=>({user}),client:async()=>mock,rpc:async(name,args)=>{
+      assert(keys[name],name);const values=keys[name].map(k=>k==='p_pieces'?JSON.stringify(args[k]):args[k]);
+      const r=await execute(user.id,`select public.${name}(${values.map((v,i)=>'$'+(i+1)).join(',')}) as data`,values);
+      if(name!=='dominius_snapshot') {
+        const table=name==='dominius_chat'?'chat_messages':name==='dominius_heartbeat'?'room_players':'matches';
+        setTimeout(()=>subscriptions.forEach(s=>s.callbacks.filter(c=>c.filter.table===table).forEach(c=>c.callback())),0);
+      }
+      return r.rows[0].data;
+    }};
+    for(const file of ['bot.js','game-rules.js','app.js','supabase-online.js']){const script=w.document.createElement('script');script.textContent=fs.readFileSync(file,'utf8');w.document.body.append(script);}
+    const click=selector=>w.document.querySelector(selector).click();
+    return {w,dom,click,q:s=>w.document.querySelector(s)};
+  }
+  try {
+    await db.exec(`create role anon;create role authenticated;create schema auth;
+      create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}');
+      create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+      grant usage on schema auth to authenticated,anon;grant execute on function auth.uid() to authenticated,anon;`);
+    await db.exec(fs.readFileSync('supabase-setup.sql','utf8'));
+    for(const id of uids)await db.query('insert into auth.users(id) values($1)',[id]);
+    const a=await page(0),b=await page(1);
+    a.w.eval("els.gameMode.value='bot';startGame();confirmArmy();");
+    assert.equal(a.w.eval('state.phase'),'battle');assert.equal(a.q('#board').children.length,100);assert.equal(a.q('#board').querySelectorAll('.blocked').length,8);
+    assert.equal(a.w.eval('state.players[1].pieces.length'),40);
+    a.w.eval("restartGame();els.gameMode.value='pvp';startGame();confirmArmy();continueToNextPlayer();confirmArmy();");
+    assert.equal(a.w.eval('state.phase'),'battle');a.w.eval('restartGame()');
+    a.click('#online-entry');await until(()=>a.q('#online-notice').textContent.includes('Escolha'),'authenticated lobby');
+    a.click('#online-create');await until(()=>a.q('#online-room-code').textContent.includes('Código'),'create');
+    const code=a.q('#online-room-code').textContent.split(': ')[1];
+    b.click('#online-entry');await until(()=>b.q('#online-notice').textContent.includes('Escolha'),'second lobby');
+    b.q('#online-code').value=code;b.q('#online-faction').value='orcs';b.q('#online-join-form').dispatchEvent(new b.w.Event('submit',{bubbles:true,cancelable:true}));
+    await until(()=>!a.q('#online-prepare').disabled&&!b.q('#online-prepare').disabled,'both connected');
+    a.click('#online-prepare');b.click('#online-prepare');
+    assert.equal(a.w.eval('state.players[0].pieces.length'),40);assert.equal(a.w.eval('state.players[1].pieces.length'),0);
+    a.click('[data-x="0"][data-y="0"]');a.click('[data-x="1"][data-y="0"]');
+    assert.equal(a.w.eval('state.board[0][1].piece.roleKey'),'objective');
+    a.click('#confirm-army-btn');await until(()=>a.q('#online-battle-status').textContent==='Aguardando adversário','first confirmation');
+    assert.equal(b.w.eval('state.players[0].pieces.length'),0,'no enemy preparation after ready');
+    b.click('#confirm-army-btn');await until(()=>a.w.eval('state.phase')==='battle'&&b.w.eval('state.phase')==='battle','battle starts');
+    assert.equal(a.w.eval('state.players[1].pieces.length'),40);assert.equal(a.w.eval('state.players[1].pieces.some(p=>p.roleKey)'),false);
+    a.click('[data-x="0"][data-y="3"]');assert(a.w.eval('state.selectedPiece'));
+    a.q('#online-message').value='<img src=x onerror=alert(1)>';a.q('#online-chat-form').dispatchEvent(new a.w.Event('submit',{bubbles:true,cancelable:true}));
+    await until(()=>b.q('#online-messages').textContent.includes('<img'),'chat delivery');
+    assert.equal(b.q('#online-messages img'),null,'untrusted text never becomes HTML');
+    assert(a.w.eval('state.selectedPiece'),'chat preserves selection');
+    a.click('[data-x="0"][data-y="4"]');await until(()=>b.w.eval('state.currentTurn')===1,'turn synchronized');
+    assert.equal(b.w.eval('state.board[4][0].piece.playerIndex'),0);
+    // Authenticated rejoin from a fresh page restores confirmed pieces and history.
+    const restored=await page(0);restored.click('#online-entry');await until(()=>restored.q('#online-notice').textContent.includes('Escolha'),'restore lobby');
+    restored.q('#online-code').value=code;restored.q('#online-join-form').dispatchEvent(new restored.w.Event('submit',{bubbles:true,cancelable:true}));
+    await until(()=>!restored.q('#online-room-info').hidden,'restored room');restored.click('#online-prepare');
+    assert.equal(restored.w.eval('state.board[4][0].piece.roleKey'),'rank3');
+    assert.deepEqual(errors,[]);
+  } finally {pages.forEach(p=>p.window.close());await queue;await db.close();}
+});

@@ -1,0 +1,27 @@
+#online-lobby { width: min(700px, calc(100% - 24px)); max-height: calc(100svh - 24px); overflow-y: auto; padding: clamp(18px, 4vw, 32px); color: #ead8b4; border: 1px solid #b8975d; background: linear-gradient(135deg, #292a27, #10161a); box-shadow: 0 20px 90px #000b, inset 0 0 0 5px #17191a, inset 0 0 0 6px #8c6b3e55; }
+#online-lobby::backdrop { background: #03070cda; }
+#online-lobby h2, #online-chat h3 { font-family: var(--font-title); color: #e6c58b; }
+#online-lobby label, #online-chat label { display: block; margin: 10px 0 6px; }
+#online-lobby input, #online-lobby select, #online-message { padding: 10px; border: 1px solid #857048; border-radius: 4px; background: #171b1e; color: #f7e4bb; font: inherit; max-width: 100%; }
+#online-actions { display: grid; gap: 10px; }
+#online-join-form { display: grid; gap: 8px; }
+#online-code { text-transform: uppercase; }
+#online-lobby button { margin-top: 10px; }
+#online-lobby :focus-visible, #online-chat :focus-visible { outline: 2px solid #ffe2a0; outline-offset: 2px; }
+#online-room-code { padding: 12px; border: 1px solid #857048; font-size: 20px; letter-spacing: .1em; }
+#online-players { padding-left: 20px; line-height: 1.8; }
+#online-notice, #online-chat-status { overflow-wrap: anywhere; min-height: 1.4em; }
+#online-toolbar { padding: 10px; border: 1px solid #857048; border-radius: 6px; }
+#online-battle-status { margin: 0 0 6px; }
+#online-chat { min-width: 0; padding: 12px; margin-top: 12px; border: 1px solid #857048; border-radius: 6px; background: #171b1e; color: #ead8b4; }
+#online-messages { max-height: 220px; min-height: 50px; overflow-y: auto; }
+#online-messages:empty::before { content: 'Diga olá ao seu adversário.'; color: #c0b29b; }
+#online-messages p { padding: 8px; margin: 0 0 8px; background: #292a27; border-left: 2px solid #796442; border-radius: 4px; }
+#online-messages p.online-own { border-left-color: #dbb770; }
+#online-messages time { margin-left: 8px; color: #c0b29b; font-size: 11px; }
+#online-messages span { display: block; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
+.online-compose { display: flex; flex-wrap: wrap; gap: 6px; }
+#online-message { width: 100%; min-width: 0; flex: 1 1 140px; }
+#online-chat button { flex: 0 0 auto; }
+#online-chat-status { font-size: 12px; margin: 8px 0 0; }
+#online-lobby [hidden], #online-chat[hidden], #online-toolbar[hidden] { display: none !important; }
