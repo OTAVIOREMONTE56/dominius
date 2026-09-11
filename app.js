@@ -1548,3 +1548,18 @@ initSelectors();
 renderPlayersSummary();
 renderLog();
 render();
+
+// Menu inicial: somente apresentação e acesso aos seletores existentes.
+// startGame, regras, facções e áudio continuam nos fluxos originais.
+(() => {
+  const preparation = document.getElementById('menu-preparation');
+  document.querySelectorAll('[data-menu-mode]').forEach((button) => {
+    button.addEventListener('click', () => {
+      els.gameMode.value = button.dataset.menuMode;
+      preparation.showModal();
+    });
+  });
+  document.getElementById('menu-preparation-close').addEventListener('click', () => preparation.close());
+  // O listener original de Jogar inicia a partida; este apenas fecha o diálogo.
+  els.startBtn.addEventListener('click', () => preparation.close());
+})();

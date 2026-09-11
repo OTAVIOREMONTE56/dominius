@@ -5,23 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DOMINIUS</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="account.css" />
   </head>
   <body>
     <div id="app">
-      <section id="start-screen" class="screen panel">
-        <div class="brand-wrap">
-          <p class="eyebrow">Protótipo local</p>
+      <section id="start-screen" class="screen menu-screen" aria-label="Menu principal">
+        <button id="account-entry" class="account-entry" type="button" data-account-open aria-haspopup="dialog" aria-controls="account-dialog">CONTA / ENTRAR</button>
+        <!-- Cenário CSS. Imagem futura: assets/interface/menu-background.png (ver --menu-scenery). -->
+        <div class="menu-scene" aria-hidden="true">
+          <div class="menu-mountains"></div>
+          <div class="menu-fortress">
+            <i class="menu-tower tower-1"></i><i class="menu-tower tower-2"></i>
+            <i class="menu-tower tower-3"></i><i class="menu-tower tower-4"></i>
+            <div class="menu-wall"></div><div class="menu-gate"></div>
+            <i class="menu-standard standard-1"></i><i class="menu-standard standard-2"></i>
+          </div>
+          <div class="menu-fire"></div><div class="menu-mist"></div>
+          <div class="menu-embers"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <header class="menu-brand">
+          <div class="menu-crown" aria-hidden="true">♜</div>
           <h1>DOMINIUS</h1>
-          <p class="subtitle">A Guerra dos Reinos</p>
+          <p class="menu-subtitle">A GUERRA DOS REINOS</p>
+          <div class="menu-divider" aria-hidden="true">◆</div>
+        </header>
+        <div class="menu-columns">
+          <section class="menu-panel" aria-labelledby="battle-heading">
+            <span class="menu-panel-mark" aria-hidden="true">⚔</span>
+            <p class="menu-kicker">CONQUISTE SEU LEGADO</p>
+            <h2 id="battle-heading">BATALHA</h2>
+            <button class="menu-button menu-button-featured" type="button" data-menu-mode="bot" aria-haspopup="dialog"><span>Contra o BOT</span><small>Enfrente um exército rival</small></button>
+            <button class="menu-button" type="button" data-menu-mode="pvp" aria-haspopup="dialog"><span>Batalha Local</span><small>Dois jogadores · um dispositivo</small></button>
+            <button class="menu-button" type="button" disabled><span>Treinamento</span><small>Em breve</small></button>
+            <p class="menu-panel-foot">Sua estratégia. Seu domínio.</p>
+          </section>
+          <section class="menu-panel" aria-labelledby="multiplayer-heading">
+            <span class="menu-panel-mark" aria-hidden="true">♜</span>
+            <p class="menu-kicker">ALÉM DAS FRONTEIRAS</p>
+            <h2 id="multiplayer-heading">MULTIPLAYER</h2>
+            <button class="menu-button" type="button" disabled><span>Criar Sala</span><small>Em breve</small></button>
+            <button class="menu-button" type="button" disabled><span>Entrar em Sala</span><small>Em breve</small></button>
+            <button class="menu-button" type="button" disabled><span>Partida Rápida</span><small><span aria-hidden="true">◇</span> Em breve</small></button>
+            <p class="menu-panel-foot">Novas alianças virão.</p>
+          </section>
         </div>
-
-        <div class="intro-card">
-          <p>
-            Um jogo de estratégia por turnos com facções ocultas, tabuleiro modular,
-            peças com diferentes funções e objetivo secreto para capturar.
-          </p>
+        <div class="menu-realms" aria-label="Os cinco reinos">
+          <p class="menu-motto">CINCO REINOS. UM ÚNICO DOMÍNIO.</p>
+          <ul class="menu-realm-list">
+            <li><span class="menu-medallion realm-roman" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 34Q3 24 13 12M35 34Q45 24 35 12M11 29l-5-3m6-3-5-3m6-3-4-3m28 15 5-3m-6-3 5-3m-6-3 4-3M19 33V16h10v17M17 16h14M17 33h14M24 16v17"/></svg></span><span>ROMANOS</span></li>
+            <li><span class="menu-medallion realm-orc" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="m12 9 6 10-6 8 12 12 12-12-6-8 6-10-12 9ZM17 25l4 2m10-2-4 2m-8 5 2 5m8-5-2 5"/></svg></span><span>ORCS</span></li>
+            <li><span class="menu-medallion realm-elf" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 39V10M24 31C6 28 12 12 24 8c12 4 18 20 0 23ZM24 25l-7-7m7 3 7-7m-7 25-7 3m7-3 7 3"/></svg></span><span>ELFOS</span></li>
+            <li><span class="menu-medallion realm-dwarf" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="m13 11 10 10-8 8L5 19Zm22 0L25 21l8 8 10-10ZM18 24l19 17M30 24 11 41M13 11l6-5 9 10m7-5-6-5-9 10"/></svg></span><span>ANÕES</span></li>
+            <li><span class="menu-medallion realm-egypt" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M5 23q19-19 38 0-19 17-38 0Zm19 8v10m0-6h9M9 28l-4 8"/><circle cx="24" cy="22" r="6"/></svg></span><span>EGÍPCIOS</span></li>
+          </ul>
         </div>
-
+        <footer class="menu-footer" aria-label="Opções adicionais">
+          <button id="account-profile-link" type="button" data-account-open aria-haspopup="dialog" aria-controls="account-dialog">PERFIL<small>Demo local</small></button>
+          <button type="button" disabled>AMIGOS<small>Em breve</small></button>
+          <span class="menu-footer-seal" aria-hidden="true">◆</span>
+          <button type="button" disabled>RANKING<small>Em breve</small></button>
+          <button type="button" disabled>CONFIGURAÇÕES<small>Em breve</small></button>
+          <button type="button" disabled>SAIR<small>Em breve</small></button>
+        </footer>
+        <dialog id="menu-preparation" class="menu-preparation" aria-labelledby="menu-preparation-title">
+          <p class="menu-kicker">O CONSELHO DE GUERRA</p>
+          <h2 id="menu-preparation-title">Prepare sua batalha</h2>
+          <p class="menu-preparation-copy">Escolha os reinos e conduza seu exército à vitória.</p>
         <div class="selector-grid">
           <div class="selector-card">
             <label for="faction-1">Jogador 1</label>
@@ -53,9 +102,12 @@
           </div>
         </div>
 
-        <div class="start-actions">
-          <button id="start-btn" class="primary-btn">Jogar</button>
-        </div>
+
+          <div class="menu-preparation-actions">
+            <button id="menu-preparation-close" class="menu-button" type="button">Voltar</button>
+            <button id="start-btn" class="menu-button menu-button-featured" type="button">Jogar</button>
+          </div>
+        </dialog>
       </section>
 
       <section id="game-screen" class="game-screen hidden">
@@ -162,6 +214,16 @@
         </aside>
       </section>
 
+      <!-- Protótipo local: não autentica usuários nem se comunica com um backend. -->
+      <dialog id="account-dialog" aria-labelledby="account-view-title" aria-describedby="account-demo-notice">
+        <button class="account-close" type="button" data-account-action="close" aria-label="Fechar área do comandante">×</button>
+        <header class="account-brand">
+          <p class="account-wordmark">DOMINIUS</p>
+          <p class="account-kicker">ÁREA DO COMANDANTE</p>
+        </header>
+        <p id="account-demo-notice" class="account-demo-notice"><strong>DEMONSTRAÇÃO LOCAL</strong> Sem autenticação online. Use somente dados fictícios. Nenhum dado é enviado ou salvo; o perfil desaparece ao recarregar.</p>
+        <div id="account-view"></div>
+      </dialog>
       <div id="end-screen" class="end-screen hidden" aria-live="polite">
         <div class="end-screen-card">
           <div id="end-screen-visual" class="end-screen-visual">
@@ -185,5 +247,6 @@
     <script src="audioManager.js"></script>
     <script src="bot.js"></script>
     <script src="app.js"></script>
+    <script src="account.js"></script>
   </body>
 </html>
