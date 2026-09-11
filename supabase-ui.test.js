@@ -90,6 +90,12 @@ test('two DOM clients: local/BOT preserved, online preparation, chat, movement a
     assert.equal(restored.w.eval('state.board[4][0].piece.roleKey'),'rank3');
     for(const p of [a,b,restored]) {
       assert.equal(p.q('#battle-log'),null);
+      const panel=p.q('#lost-pieces-panel');
+      assert.equal(panel.open,false);
+      assert.equal(panel.previousElementSibling.id,'board');
+      assert.equal(p.q('.right-panel #lost-pieces'),null);
+      assert(p.q('.right-panel #online-chat #online-chat-form'));
+      panel.querySelector('summary').click();assert.equal(panel.open,true);
       assert.deepEqual([...p.w.document.querySelectorAll('.banner-counter')].map(el=>el.textContent),['40 / 40','40 / 40']);
       assert.equal(p.w.document.querySelectorAll('.lost-piece-list .empty').length,2);
     }
@@ -105,8 +111,11 @@ test('two DOM clients: local/BOT preserved, online preparation, chat, movement a
     for(const p of [a,b,restored]) {
       assert.deepEqual([...p.w.document.querySelectorAll('.banner-counter')].map(el=>el.textContent),['37 / 40','39 / 40']);
       const cards=p.w.document.querySelectorAll('.player-card');
-      assert.deepEqual([...cards[0].querySelectorAll('li strong')].slice(0,3).map(el=>el.textContent),['37 / 40','37','3']);
-      assert.deepEqual([...cards[1].querySelectorAll('li strong')].slice(0,3).map(el=>el.textContent),['39 / 40','39','1']);
+      assert.deepEqual([...cards[0].querySelectorAll('li strong')].map(el=>el.textContent),['37 / 40','3','Confirmado']);
+      assert.deepEqual([...cards[1].querySelectorAll('li strong')].map(el=>el.textContent),['39 / 40','1','Confirmado']);
+      assert.deepEqual([...cards[0].querySelectorAll('li > span')].map(el=>el.textContent),['Peças','Perdidas','Status']);
+      assert.equal(p.q('#lost-pieces-panel').open,true,'snapshot preserves expanded panel');
+      p.q('#lost-pieces-panel summary').click();assert.equal(p.q('#lost-pieces-panel').open,false);
       const groups=p.w.document.querySelectorAll('.lost-piece-list');
       assert.deepEqual([...groups[0].children].map(el=>el.textContent),['Legionário x3']);
       assert.deepEqual([...groups[1].children].map(el=>el.textContent),[p.w.eval("FACTIONS.orcs.names.trap")+' x1']);

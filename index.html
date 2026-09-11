@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DOMINIUS</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=piece-panel-3" />
     <link rel="stylesheet" href="account.css" />
     <link rel="stylesheet" href="supabase-online.css" />
   </head>
@@ -189,6 +189,10 @@
           </div>
 
           <div id="board" class="board" aria-label="Tabuleiro de jogo"></div>
+          <details id="lost-pieces-panel" class="lost-pieces-panel">
+            <summary>PEÇAS PERDIDAS <span class="lost-arrow" aria-hidden="true"></span></summary>
+            <div id="lost-pieces" class="lost-pieces"></div>
+          </details>
         </main>
 
         <aside class="panel right-panel">
@@ -199,11 +203,6 @@
 
           <div id="piece-info" class="piece-info"></div>
 
-          <div class="section-heading compact">
-            <p class="eyebrow">Peças</p>
-            <h3>Peças perdidas</h3>
-          </div>
-          <div id="lost-pieces" class="lost-pieces"></div>
 
         </aside>
       </section>
@@ -241,7 +240,7 @@
     <script src="audioManager.js"></script>
     <script src="bot.js"></script>
     <script src="game-rules.js"></script>
-    <script src="app.js?v=piece-counters-2"></script>
+    <script src="app.js?v=piece-panel-3"></script>
     <script src="supabase-config.js?v=pvnhfxqvypxxiakdbctf"></script>
     <script src="supabase-client.js?v=2"></script>
     <script src="account.js?v=2"></script>

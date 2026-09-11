@@ -142,7 +142,6 @@ function renderPlayersSummary() {
       </div>
       <ul>
         <li><span>Peças</span><strong>${remaining} / ${PIECES_PER_PLAYER}</strong></li>
-        <li><span>Restantes</span><strong>${remaining}</strong></li>
         <li><span>Perdidas</span><strong>${lost}</strong></li>
         <li><span>Status</span><strong>${player.ready ? 'Confirmado' : 'Preparando'}</strong></li>
       </ul>
