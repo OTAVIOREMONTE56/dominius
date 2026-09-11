@@ -1,0 +1,62 @@
+﻿[
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\.gitignore",
+        "Hash":  "602060AEC7F142EE604FD7A1DA9A8F0D2AA27D19E568C35C4E59AE66A08BA619"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\account.css",
+        "Hash":  "DC46471D64B4C0F21415818095339C5236DE2437137702026F79AF40CB4ED108"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\account.js",
+        "Hash":  "21A1707EAC7399E8309D684FF63A81E79AF45A4B837917D3C9ED0CA8C8F4A1AF"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\app.js",
+        "Hash":  "1A6B60AD247E4989F00CED5F02C20CA1C97ED0F929BA982891B7DE7DB7F86883"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\audioManager.js",
+        "Hash":  "63F91183C350C04D1FEA84251B45544CCEFFB1BB413E5312375937A69922858B"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\bot.js",
+        "Hash":  "3266061453A7605066078A2F71563620A94E9B39504B0BBE931EDBE108A2DB19"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\game-rules.js",
+        "Hash":  "24731DACB4A22FFFE3CD75AF420599B8511730ABE4E8C728AAEC9B47CEFE1973"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\index.html",
+        "Hash":  "EC8BF50F74E1641C065D715CE693A1513C0683CAB7469BF0C45FE66ADD6818DA"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\multiplayer.css",
+        "Hash":  "38F6BB570195CD754162CA60D514D197C37773BE0AA46136DE941655ED6B2C4B"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\multiplayer.js",
+        "Hash":  "788006A153E4C9590EF1B554170B62F0EF022319B6C1249D6748065FDDE36BDB"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\multiplayer.test.js",
+        "Hash":  "4B93AB3B81A154E38A2BD70A4136E93A4E9E330CDD59357B4B95C28069A3C7EF"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\package.json",
+        "Hash":  "927B34843CB729DEE7328266C8612B3DAC3AFFA6194483FA2DA17BC6A587CE36"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\README.md",
+        "Hash":  "07CD3825B8B5862426B72AA5EE8B0309DE0A408DB16661EA2E20DD25D5CC4FB5"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\server.js",
+        "Hash":  "11771899A5FC1FFA106ED725F61F55D469979606ADB3C0ECB1358B10A1474F89"
+    },
+    {
+        "Path":  "C:\\DOMINIUS\\backups\\before-supabase-20260911\\styles.css",
+        "Hash":  "D84C7910A3003EA16A62A314180681964426CF6B88ACB114A6F56F8A97D2BFF5"
+    }
+]

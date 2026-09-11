@@ -1,0 +1,20 @@
+#multiplayer-dialog { max-width: 460px; width: calc(100% - 32px); }
+#multiplayer-options:not([hidden]) { display: grid; gap: 12px; }
+#multiplayer-dialog select, #multiplayer-dialog input { width: 100%; padding: 12px; color: #f7e4bb; background: #211e19; border: 1px solid #857048; border-radius: 6px; font: inherit; }
+#online-code { text-transform: uppercase; }
+#online-status { margin: 18px 0; line-height: 1.6; }
+#online-banner { grid-column: 1 / -1; padding: 12px 18px; border: 1px solid #857048; border-radius: 8px; background: #211e19; color: #f7e4bb; }
+#room-chat { grid-column: 1 / -1; min-width: 0; margin-top: 16px; padding: 16px; border: 1px solid #857048; border-radius: 8px; background: #211e19; color: #f7e4bb; }
+#room-chat[hidden] { display: none; }
+#room-chat h3 { margin: 0 0 12px; }
+#chat-messages { max-height: 240px; overflow-y: auto; min-height: 70px; text-align: left; }
+#chat-messages:empty::before { content: 'Ainda não há mensagens. Diga olá!'; color: #bcae94; }
+#chat-messages p { padding: 8px 12px; border-radius: 6px; background: #302a21; margin: 0 0 8px; }
+#chat-messages .chat-own { border-left: 3px solid #d4b66a; }
+#chat-messages time { margin-left: 10px; font-size: 12px; color: #bcae94; }
+#chat-messages span { display: block; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
+#chat-form label { display: block; margin: 12px 0 6px; }
+.chat-compose { display: flex; gap: 8px; }
+#chat-input { flex: 1; min-width: 0; padding: 10px; color: #f7e4bb; background: #171510; border: 1px solid #857048; border-radius: 6px; font: inherit; }
+#chat-status { margin: 8px 0 0; font-size: 13px; }
+@media (max-width: 480px) { .chat-compose { flex-direction: column; } }
