@@ -21,28 +21,33 @@ test('two DOM clients: local/BOT preserved, online preparation, chat, movement a
     const console=new VirtualConsole();console.on('jsdomError',e=>errors.push(e.message));
     const dom=new JSDOM(fs.readFileSync('index.html','utf8').replace(/<script[^>]*src=[^>]+><\/script>/g,''),{url:'http://localhost:8000/',runScripts:'dangerously',virtualConsole:console});
     pages.push(dom);const w=dom.window;
+    // Nenhum timer periódico roda: movimento/chat precisam chegar por eventos.
+    const intervals=new Map();let timerId=0,snapshots=0;
+    w.setInterval=(callback,delay)=>{intervals.set(++timerId,{callback,delay});return timerId;};
+    w.clearInterval=id=>intervals.delete(id);
     w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
     w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
     w.audioManager={unlock(){},playAmbient(){},stopAmbient(){},playPassos(){},playEspadas(){},playVitoria(){},playDerrota(){},playDesarme(){},playExplosao(){}};
     w.matchMedia=()=>({matches:true});
     const user={id:uids[index],email:`player${index}@example.test`};
     const mock={
-      channel(){const callbacks=[];const channel={on(type,filter,callback){callbacks.push({filter,callback});return channel;},subscribe(callback){subscriptions.push({channel,callbacks});setTimeout(()=>callback('SUBSCRIBED'),0);return channel;}};return channel;},
+      channel(){const callbacks=[];const channel={on(type,filter,callback){callbacks.push({filter,callback});return channel;},subscribe(callback){subscriptions.push({channel,callbacks,status:callback,owner:w});setTimeout(()=>callback('SUBSCRIBED'),0);return channel;}};return channel;},
       removeChannel(channel){const i=subscriptions.findIndex(s=>s.channel===channel);if(i>=0)subscriptions.splice(i,1);return Promise.resolve();},
       from(){let room;const query={select(){return query;},eq(k,v){room=v;return query;},order(){return query;},limit(){return execute(user.id,'select id,user_id,body,created_at from public.chat_messages where room_id=$1 order by id desc limit 100',[room]).then(r=>({data:r.rows,error:null}));}};return query;},
     };
     w.DominiusCloud={configured:true,session:async()=>({user}),client:async()=>mock,rpc:async(name,args)=>{
+      if(name==='dominius_snapshot')snapshots++;
       assert(keys[name],name);const values=keys[name].map(k=>k==='p_pieces'?JSON.stringify(args[k]):args[k]);
       const r=await execute(user.id,`select public.${name}(${values.map((v,i)=>'$'+(i+1)).join(',')}) as data`,values);
       if(name!=='dominius_snapshot') {
-        const table=name==='dominius_chat'?'chat_messages':name==='dominius_heartbeat'?'room_players':'matches';
+        const table=name==='dominius_chat'?'chat_messages':name==='dominius_move'?'match_moves':name==='dominius_heartbeat'?'room_players':'matches';
         setTimeout(()=>subscriptions.forEach(s=>s.callbacks.filter(c=>c.filter.table===table).forEach(c=>c.callback())),0);
       }
       return r.rows[0].data;
     }};
     for(const file of ['bot.js','game-rules.js','app.js','supabase-online.js']){const script=w.document.createElement('script');script.textContent=fs.readFileSync(file,'utf8');w.document.body.append(script);}
     const click=selector=>w.document.querySelector(selector).click();
-    return {w,dom,click,q:s=>w.document.querySelector(s)};
+    return {w,dom,click,q:s=>w.document.querySelector(s),intervals,get snapshots(){return snapshots;}};
   }
   try {
     await db.exec(`create role anon;create role authenticated;create schema auth;
@@ -83,6 +88,55 @@ test('two DOM clients: local/BOT preserved, online preparation, chat, movement a
     restored.q('#online-code').value=code;restored.q('#online-join-form').dispatchEvent(new restored.w.Event('submit',{bubbles:true,cancelable:true}));
     await until(()=>!restored.q('#online-room-info').hidden,'restored room');restored.click('#online-prepare');
     assert.equal(restored.w.eval('state.board[4][0].piece.roleKey'),'rank3');
+    for(const p of [a,b,restored]) {
+      assert.equal(p.q('#battle-log'),null);
+      assert.deepEqual([...p.w.document.querySelectorAll('.banner-counter')].map(el=>el.textContent),['40 / 40','40 / 40']);
+      assert.equal(p.w.document.querySelectorAll('.lost-piece-list .empty').length,2);
+    }
+    // Snapshot após perdas de ambos os exércitos: entrega somente por Realtime.
+    await queue;await db.exec('reset role');
+    await db.query(`update public.match_pieces set lost=true,x=-1,y=-1 where id in
+      (select id from public.match_pieces where owner_id=$1 and role='rank3' limit 3)`,[uids[0]]);
+    await db.query(`update public.match_pieces set lost=true,x=-1,y=-1 where id in
+      (select id from public.match_pieces where owner_id=$1 and role='trap' limit 1)`,[uids[1]]);
+    await db.exec('update public.matches set version=version+1');
+    subscriptions.forEach(s=>s.callbacks.filter(c=>c.filter.table==='matches').forEach(c=>c.callback()));
+    await until(()=>[a,b,restored].every(p=>p.q('.banner-counter').textContent==='37 / 40'),'loss counters synchronized');
+    for(const p of [a,b,restored]) {
+      assert.deepEqual([...p.w.document.querySelectorAll('.banner-counter')].map(el=>el.textContent),['37 / 40','39 / 40']);
+      const cards=p.w.document.querySelectorAll('.player-card');
+      assert.deepEqual([...cards[0].querySelectorAll('li strong')].slice(0,3).map(el=>el.textContent),['37 / 40','37','3']);
+      assert.deepEqual([...cards[1].querySelectorAll('li strong')].slice(0,3).map(el=>el.textContent),['39 / 40','39','1']);
+      const groups=p.w.document.querySelectorAll('.lost-piece-list');
+      assert.deepEqual([...groups[0].children].map(el=>el.textContent),['Legionário x3']);
+      assert.deepEqual([...groups[1].children].map(el=>el.textContent),[p.w.eval("FACTIONS.orcs.names.trap")+' x1']);
+      assert(p.w.eval('state.log.length')>0,'internal logs preserved');
+    }
+    await queue;await new Promise(r=>setTimeout(r,20));
+    assert.equal(subscriptions.filter(s=>s.owner===restored.w).length,1);
+    const sub=subscriptions.find(s=>s.owner===restored.w);
+    assert(!sub.callbacks.some(c=>c.filter.table==='match_pieces'),'secret pieces never subscribed');
+    assert(restored.intervals.size===2);
+    assert([...restored.intervals.values()].some(t=>t.delay===60000));
+    sub.status('CHANNEL_ERROR',new Error('simulated disconnect'));
+    assert([...restored.intervals.values()].some(t=>t.delay===3000));
+    assert(![...restored.intervals.values()].some(t=>t.delay===60000));
+    sub.status('SUBSCRIBED');
+    assert.equal(restored.intervals.size,2,'reconnect replaces fallback without duplicate timers');
+    await queue;await new Promise(r=>setTimeout(r,20));
+    const beforeResume=restored.snapshots;
+    restored.w.dispatchEvent(new restored.w.Event('online'));
+    await until(()=>restored.snapshots>beforeResume,'network return synchronizes immediately');
+    await restored.w.dominiusMultiplayer.leave();
+    await queue;await new Promise(r=>setTimeout(r,20));
+    assert.equal(restored.intervals.size,0);
+    assert.equal(subscriptions.filter(s=>s.owner===restored.w).length,0);
+    const afterLeave=restored.snapshots;
+    sub.callbacks.forEach(c=>c.callback());sub.status('SUBSCRIBED');
+    restored.w.dispatchEvent(new restored.w.Event('online'));
+    await new Promise(r=>setTimeout(r,20));
+    assert.equal(restored.snapshots,afterLeave,'late callbacks cannot resurrect a departed room');
+    assert.equal(restored.intervals.size,0);
     assert.deepEqual(errors,[]);
   } finally {pages.forEach(p=>p.window.close());await queue;await db.close();}
 });

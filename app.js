@@ -85,6 +85,7 @@ function addLog(text, type = '') {
 }
 
 function renderLog() {
+  if (!els.battleLog) return;
   els.battleLog.innerHTML = '';
 
   state.log.forEach((entry) => {
@@ -119,9 +120,14 @@ function renderPlayersSummary() {
   state.players.forEach((player, index) => {
     const faction = FACTIONS[player.faction];
     const activePlayerIndex = isSetupPhase() ? getSetupPlayerIndex() : state.currentTurn;
-    const remaining = isSetupPhase()
-      ? player.pieces.filter((piece) => !piece.setupMoved).length
-      : 0;
+    // A preparação online oculta o exército rival, mas ele começa com 40 peças.
+    const lost = player.lostPieces.length;
+    const remaining = PIECES_PER_PLAYER - lost;
+    const banner = document.querySelectorAll('.player-banner')[index];
+    if (banner) {
+      banner.querySelector('.banner-counter').textContent = `${remaining} / ${PIECES_PER_PLAYER}`;
+      banner.querySelector('.banner-name').textContent = faction.label;
+    }
 
     const card = document.createElement('div');
     card.className = `player-card ${index === activePlayerIndex ? 'active' : ''}`;
@@ -135,9 +141,9 @@ function renderPlayersSummary() {
         </span>
       </div>
       <ul>
-        <li><span>Peças</span><strong>${PIECES_PER_PLAYER} / ${PIECES_PER_PLAYER}</strong></li>
-        <li><span>Restantes</span><strong>${isSetupPhase() ? remaining : player.pieces.filter((piece) => !piece.lost).length}</strong></li>
-        <li><span>Perdidas</span><strong>${player.lostPieces.length}</strong></li>
+        <li><span>Peças</span><strong>${remaining} / ${PIECES_PER_PLAYER}</strong></li>
+        <li><span>Restantes</span><strong>${remaining}</strong></li>
+        <li><span>Perdidas</span><strong>${lost}</strong></li>
         <li><span>Status</span><strong>${player.ready ? 'Confirmado' : 'Preparando'}</strong></li>
       </ul>
     `;
@@ -171,11 +177,21 @@ function renderLostPieces() {
     const list = document.createElement('ul');
     list.className = 'lost-piece-list';
 
-    const items = player.lostPieces.length
-      ? player.lostPieces.map((piece) => `<li>${piece.short || piece.label} · ${piece.name}</li>`).join('')
-      : '<li class="empty">Nenhuma peça perdida</li>';
-
-    list.innerHTML = items;
+    const groups = new Map();
+    for (const piece of player.lostPieces) {
+      const name = FACTIONS[player.faction].names[piece.roleKey] || piece.name || piece.label;
+      groups.set(name, (groups.get(name) || 0) + 1);
+    }
+    for (const [name, count] of groups) {
+      const item = document.createElement('li');
+      item.textContent = `${name} x${count}`;
+      list.appendChild(item);
+    }
+    if (!groups.size) {
+      const item = document.createElement('li');
+      item.className = 'empty';item.textContent = 'Nenhuma peça perdida';
+      list.appendChild(item);
+    }
 
     section.appendChild(header);
     section.appendChild(list);
