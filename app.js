@@ -351,9 +351,8 @@ function renderBoard() {
             if (cell.piece.roleKey === 'rank10') pieceEl.classList.add('roman-rank10');
             pieceEl.style.removeProperty('--piece-image');
             pieceEl.innerHTML = `
-              <span class="piece-name" aria-hidden="true">
-                ${cell.piece.short}
-                <span class="piece-role">${cell.piece.label}</span>
+              <span class="roman-rank-badge" aria-hidden="true">
+                ${cell.piece.isTrap ? 'TR' : cell.piece.isObjective ? 'OBJ' : cell.piece.short}
               </span>
             `;
             // Elemento real, criado somente depois da verificação de visibilidade.
