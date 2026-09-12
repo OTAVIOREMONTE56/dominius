@@ -65,18 +65,18 @@ const FACTIONS = {
       rank1: 'Espião Imperial',
     },
     images: {
-      objective: 'estandarte-imperial.png',
-      trap: 'barricada.png',
+      objective: 'objetivo.png',
+      trap: 'armadilha.png',
       rank10: 'cesar.png',
-      rank9: 'general.png',
-      rank8: 'legado.png',
-      rank7: 'tribuno.png',
-      rank6: 'centuriao.png',
-      rank5: 'optio.png',
-      rank4: 'legionario-veterano.png',
-      rank3: 'legionario.png',
-      rank2: 'explorador.png',
-      rank1: 'espiao-imperial.png',
+      rank9: 'rank-9.png',
+      rank8: 'rank-8.png',
+      rank7: 'rank-7.png',
+      rank6: 'rank-6.png',
+      rank5: 'rank-5.png',
+      rank4: 'rank-4.png',
+      rank3: 'rank-3.png',
+      rank2: 'rank-2.png',
+      rank1: 'rank-1.png',
     },
   },
   orcs: {
@@ -228,8 +228,7 @@ function buildPlayers() {
     Object.entries(PIECE_COUNTS).forEach(([roleKey, count]) => {
       for (let index = 0; index < count; index += 1) {
         const config = PIECE_CONFIG[roleKey];
-        const isCesarPiece = playerIndex === 0 && factionKey === 'romanos' && roleKey === 'rank10';
-        const fileName = isCesarPiece ? faction.images?.[roleKey] || '' : '';
+        const fileName = factionKey === 'romanos' ? faction.images?.[roleKey] || '' : '';
 
         pieces.push({
           id: `${playerIndex}-${roleKey}-${index}`,

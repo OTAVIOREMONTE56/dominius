@@ -2785,6 +2785,34 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
 #game-screen #online-chat { background: linear-gradient(#1c262188, #0a100d99); }
 #game-screen .lost-pieces-panel summary { background: linear-gradient(90deg, #64503344, #14191466, #64503344); }
 /* Em navegadores móveis, evitar o recorte instável de background-attachment: fixed. */
+/* Retratos romanos: arte circular contida no aro azul da facção. */
+#game-screen .piece[data-faction="romanos"] {
+  background: conic-gradient(from -30deg, #9bcaff, #2868b2 14%, #0b234e 30%,
+    #2868b2 49%, #80b7f2 54%, #0b234e 72%, #2868b2 91%, #9bcaff);
+}
+#game-screen .piece.roman-portrait .piece-art {
+  position: absolute;
+  inset: 7%;
+  z-index: 1;
+  display: block;
+  width: 86%;
+  height: 86%;
+  object-fit: cover;
+  object-position: center;
+  border: 1px solid #a4caff;
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+#game-screen .piece.roman-portrait .piece-name {
+  bottom: 6%;
+  margin: 0;
+  opacity: 1;
+  visibility: visible;
+  font-size: clamp(8px, .85vw, 11px);
+  background: #07172eef;
+  border-color: #91b8eb;
+}
 @media (hover: none) and (pointer: coarse) {
   body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
     background-attachment: scroll;

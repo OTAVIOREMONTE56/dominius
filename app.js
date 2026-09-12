@@ -343,13 +343,15 @@ function renderBoard() {
           pieceEl.dataset.kind = cell.piece.isObjective ? 'objective' : cell.piece.isTrap ? 'trap' : 'warrior';
           pieceEl.setAttribute('aria-label', cell.piece.name);
           pieceEl.title = cell.piece.name;
-          const isRomanCesar = cell.piece.factionKey === 'romanos' && cell.piece.roleKey === 'rank10';
+          const romanImage = pieceEl.dataset.faction === 'romanos'
+            ? FACTIONS.romanos.images[cell.piece.roleKey] : '';
 
-          if (isRomanCesar) {
-            pieceEl.classList.add('roman-rank10');
+          if (romanImage) {
+            pieceEl.classList.add('roman-portrait');
+            if (cell.piece.roleKey === 'rank10') pieceEl.classList.add('roman-rank10');
             pieceEl.style.removeProperty('--piece-image');
             pieceEl.innerHTML = `
-              <img class="piece-art" src="${cell.piece.image}" alt="${cell.piece.name}" />
+              <img class="piece-art" src="assets/romanos/${romanImage}" alt="${cell.piece.name}" />
               <span class="piece-name" aria-hidden="true">
                 ${cell.piece.short}
                 <span class="piece-role">${cell.piece.label}</span>
@@ -395,10 +397,13 @@ function renderPieceInfo() {
     { label: 'Posição', value: `${state.selectedPiece.x + 1}, ${state.selectedPiece.y + 1}` },
   ];
 
-  const piecePreviewMarkup = state.selectedPiece.image
+  const romanPreviewFile = player.faction === 'romanos'
+    ? FACTIONS.romanos.images[state.selectedPiece.roleKey] : '';
+  const previewImage = romanPreviewFile ? `assets/romanos/${romanPreviewFile}` : state.selectedPiece.image;
+  const piecePreviewMarkup = previewImage
     ? `
         <div class="piece-preview">
-          <img src="${state.selectedPiece.image}" alt="${state.selectedPiece.name}" />
+          <img src="${previewImage}" alt="${state.selectedPiece.name}" />
         </div>
       `
     : '';

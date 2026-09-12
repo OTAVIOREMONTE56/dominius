@@ -1,6 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
+const vm=require('node:vm');
 const {JSDOM}=require('jsdom');
 
 test('faction colors survive swapped seats and hidden online opponents',t=>{
@@ -9,7 +10,7 @@ test('faction colors survive swapped seats and hidden online opponents',t=>{
   t.after(()=>dom.window.close());
   const w=dom.window;
   w.matchMedia=()=>({matches:true});
-  for(const file of ['bot.js','game-rules.js','app.js'])w.eval(read(file));
+  for(const file of ['bot.js','game-rules.js','app.js'])vm.runInContext(read(file),dom.getInternalVMContext());
   const style=w.document.createElement('style');style.textContent=read('styles.css');w.document.head.append(style);
   const colors={romanos:'#2868b2',orcs:'#b33240',elfos:'#299563',anoes:'#df812f',egipcios:'#d6ad38'};
   for(const faction of Object.keys(colors))for(const seat of [0,1])for(const viewer of [0,1]) {
