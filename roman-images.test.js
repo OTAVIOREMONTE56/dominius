@@ -37,8 +37,13 @@ test('Roman portraits map every role, preserve Caesar and never expose hidden id
       const piece = w.document.querySelector('#board .piece');
       if (seat === viewer) {
         assert.equal(piece.querySelector('img').getAttribute('src'), `assets/romanos/${file}`);
-        assert.equal(piece.querySelector('.roman-rank-badge').textContent.trim(),
-          role === 'trap' ? 'TR' : w.eval(`PIECE_CONFIG.${role}.short`));
+        if (role === 'trap' || role === 'objective') {
+          assert.equal(piece.querySelector('.roman-rank-badge'), null);
+          assert.equal(piece.textContent.trim(), '');
+        } else {
+          assert.equal(piece.querySelector('.roman-rank-badge').textContent.trim(),
+            w.eval(`PIECE_CONFIG.${role}.short`));
+        }
       } else {
         assert.equal(piece.textContent, '?');
         assert.equal(piece.querySelector('img,svg'), null);

@@ -343,22 +343,22 @@ function renderBoard() {
           pieceEl.dataset.kind = cell.piece.isObjective ? 'objective' : cell.piece.isTrap ? 'trap' : 'warrior';
           pieceEl.setAttribute('aria-label', cell.piece.name);
           pieceEl.title = cell.piece.name;
-          const romanImage = pieceEl.dataset.faction === 'romanos'
-            ? FACTIONS.romanos.images[cell.piece.roleKey] : '';
+          const portraitImage = FACTIONS[pieceEl.dataset.faction]?.images[cell.piece.roleKey];
 
-          if (romanImage) {
-            pieceEl.classList.add('roman-portrait');
-            if (cell.piece.roleKey === 'rank10') pieceEl.classList.add('roman-rank10');
+          if (portraitImage) {
+            pieceEl.classList.add('faction-portrait');
+            if (pieceEl.dataset.faction === 'romanos') pieceEl.classList.add('roman-portrait');
+            if (pieceEl.dataset.faction === 'romanos' && cell.piece.roleKey === 'rank10') pieceEl.classList.add('roman-rank10');
             pieceEl.style.removeProperty('--piece-image');
-            pieceEl.innerHTML = `
-              <span class="roman-rank-badge" aria-hidden="true">
-                ${cell.piece.isTrap ? 'TR' : cell.piece.isObjective ? 'OBJ' : cell.piece.short}
+            pieceEl.innerHTML = cell.piece.isTrap || cell.piece.isObjective ? '' : `
+              <span class="faction-rank-badge roman-rank-badge" aria-hidden="true">
+                ${cell.piece.short}
               </span>
             `;
             // Elemento real, criado somente depois da verificação de visibilidade.
             const artwork = document.createElement('img');
             artwork.className = 'piece-art';
-            const imagePath = `assets/romanos/${romanImage}`;
+            const imagePath = `assets/${pieceEl.dataset.faction}/${portraitImage}`;
             artwork.src = cell.piece.image === imagePath ? cell.piece.image : imagePath;
             artwork.alt = cell.piece.name;
             artwork.draggable = false;
@@ -403,9 +403,8 @@ function renderPieceInfo() {
     { label: 'Posição', value: `${state.selectedPiece.x + 1}, ${state.selectedPiece.y + 1}` },
   ];
 
-  const romanPreviewFile = player.faction === 'romanos'
-    ? FACTIONS.romanos.images[state.selectedPiece.roleKey] : '';
-  const previewImage = romanPreviewFile ? `assets/romanos/${romanPreviewFile}` : state.selectedPiece.image;
+  const previewFile = FACTIONS[player.faction]?.images[state.selectedPiece.roleKey];
+  const previewImage = previewFile ? `assets/${player.faction}/${previewFile}` : state.selectedPiece.image;
   const piecePreviewMarkup = previewImage
     ? `
         <div class="piece-preview">
