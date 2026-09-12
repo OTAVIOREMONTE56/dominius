@@ -351,12 +351,19 @@ function renderBoard() {
             if (cell.piece.roleKey === 'rank10') pieceEl.classList.add('roman-rank10');
             pieceEl.style.removeProperty('--piece-image');
             pieceEl.innerHTML = `
-              <img class="piece-art" src="assets/romanos/${romanImage}" alt="${cell.piece.name}" />
               <span class="piece-name" aria-hidden="true">
                 ${cell.piece.short}
                 <span class="piece-role">${cell.piece.label}</span>
               </span>
             `;
+            // Elemento real, criado somente depois da verificação de visibilidade.
+            const artwork = document.createElement('img');
+            artwork.className = 'piece-art';
+            const imagePath = `assets/romanos/${romanImage}`;
+            artwork.src = cell.piece.image === imagePath ? cell.piece.image : imagePath;
+            artwork.alt = cell.piece.name;
+            artwork.draggable = false;
+            pieceEl.prepend(artwork);
           } else {
             pieceEl.style.setProperty('--piece-image', cell.piece.image ? `url("${cell.piece.image}")` : 'none');
             pieceEl.innerHTML = `

@@ -2790,11 +2790,21 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
   background: conic-gradient(from -30deg, #9bcaff, #2868b2 14%, #0b234e 30%,
     #2868b2 49%, #80b7f2 54%, #0b234e 72%, #2868b2 91%, #9bcaff);
 }
+#game-screen .piece.roman-portrait {
+  isolation: isolate;
+}
+#game-screen .piece.roman-portrait::before,
+#game-screen .piece.roman-portrait::after {
+  z-index: 0;
+  pointer-events: none;
+}
 #game-screen .piece.roman-portrait .piece-art {
   position: absolute;
   inset: 7%;
-  z-index: 1;
+  z-index: 2;
   display: block;
+  opacity: 1;
+  visibility: visible;
   width: 86%;
   height: 86%;
   object-fit: cover;
