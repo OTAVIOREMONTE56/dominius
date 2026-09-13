@@ -566,9 +566,13 @@ function getSetupValidMoves(piece) {
 // Apresentação apenas: regras e mutações continuam nas funções originais.
 const visualMotion = {
   busy: false, freeze: false, endPending: false, epoch: 0,
-  animations: new Set(), timers: new Map(), controls: [],
+  animations: new Set(), timers: new Map(), controls: [], scene: null,
 };
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const cinematicMotion = () => {
+  const effects = window.audioManager?.getState?.();
+  return !reducedMotion() && effects?.enabled !== false && effects?.effectsVolume !== 0;
+};
 const motionCell = (x, y) => els.board.querySelector(`[data-x="${x}"][data-y="${y}"]`);
 
 function motionPause(ms, epoch) {
@@ -576,7 +580,7 @@ function motionPause(ms, epoch) {
     const timer = window.setTimeout(() => {
       visualMotion.timers.delete(timer);
       resolve(epoch === visualMotion.epoch);
-    }, reducedMotion() ? Math.min(ms, 40) : ms);
+    }, cinematicMotion() ? ms : Math.min(ms, 40));
     visualMotion.timers.set(timer, resolve);
   });
 }
@@ -584,7 +588,7 @@ function motionPause(ms, epoch) {
 async function motionTween(element, frames, duration, epoch) {
   if (!element?.animate) return motionPause(duration, epoch);
   const animation = element.animate(frames, {
-    duration: reducedMotion() ? 1 : duration,
+    duration: cinematicMotion() ? duration : 1,
     easing: 'cubic-bezier(.22,.7,.25,1)', fill: 'forwards',
   });
   visualMotion.animations.add(animation);
@@ -593,6 +597,8 @@ async function motionTween(element, frames, duration, epoch) {
 }
 
 function clearMotionEffects() {
+  visualMotion.scene?.remove();
+  visualMotion.scene = null;
   visualMotion.animations.forEach((animation) => animation.cancel());
   visualMotion.animations.clear();
   visualMotion.controls.forEach(([control, disabled]) => { control.disabled = disabled; });
@@ -640,10 +646,108 @@ function motionRoute(piece, x, y) {
   const from = origin.getBoundingClientRect();
   const to = destination.getBoundingClientRect();
   origin.classList.add('motion-origin');
-  destination.classList.add('motion-destination');
+  if (cinematicMotion()) origin.classList.add('motion-dust', `motion-${piece.factionKey}`);
+  destination.classList.add('motion-destination', `motion-${piece.factionKey}`);
   return { origin, destination, element: origin.querySelector('.piece'),
     dx: to.left - from.left, dy: to.top - from.top, size: from.width };
 }
+
+function combatCaption(attacker, defender, battle) {
+  if (battle.captureObjective) return ['OBJETIVO CAPTURADO', 'Vitória'];
+  if (defender.isTrap) return attacker.rank === 3
+    ? ['ARMADILHA DESATIVADA', `Rank ${attacker.rank} permanece`]
+    : ['ARMADILHA ATIVADA', 'Atacante eliminado'];
+  if (attacker.rank === 1 && defender.rank === 10) return ['ATAQUE SURPRESA', 'Rank 1 vence'];
+  if (battle.outcome === 'tie') return ['EMPATE', 'AMBOS ELIMINADOS'];
+  const winner = battle.outcome === 'attacker' ? attacker : defender;
+  return ['VITÓRIA', `RANK ${winner.rank}`];
+}
+
+function combatPortrait(piece, side) {
+  const card = document.createElement('div');
+  card.className = `duel-card duel-${side}`;
+  card.dataset.faction = piece.factionKey;
+  const image = document.createElement('img');
+  image.src = `assets/${piece.factionKey}/${FACTIONS[piece.factionKey].images[piece.roleKey]}`;
+  image.alt = piece.name;
+  const caption = document.createElement('span');
+  caption.textContent = `${FACTIONS[piece.factionKey].label} · ${piece.isTrap ? 'Armadilha' : piece.isObjective ? 'Objetivo' : `Rank ${piece.rank}`}`;
+  card.append(image, caption);
+  return card;
+}
+
+async function playCombatScene(attacker, defender, battle, epoch) {
+  if (!cinematicMotion()) return;
+  visualMotion.scene?.remove();
+  const scene = document.createElement('div');
+  scene.className = `duel-scene${battle.captureObjective ? ' duel-objective' : ''}`;
+  scene.dataset.outcome = battle.outcome;
+  scene.dataset.type = battle.captureObjective ? 'objective' : defender.isTrap
+    ? (attacker.rank === 3 ? 'disarm' : 'trap')
+    : attacker.rank === 1 && defender.rank === 10 ? 'surprise'
+      : battle.outcome === 'tie' ? 'tie' : 'combat';
+  scene.setAttribute('aria-live', 'polite');
+  const stage = document.createElement('div');
+  stage.className = 'duel-stage';
+  if (!battle.captureObjective) stage.appendChild(combatPortrait(attacker, 'attacker'));
+  stage.appendChild(combatPortrait(defender, 'defender'));
+  const result = document.createElement('div');
+  result.className = 'duel-result';
+  const [heading, detail] = combatCaption(attacker, defender, battle);
+  const title = document.createElement('strong');
+  title.textContent = heading;
+  const sub = document.createElement('span');
+  sub.textContent = detail;
+  result.append(title, sub);
+  scene.append(stage, result);
+  document.body.appendChild(scene);
+  visualMotion.scene = scene;
+  if (!await motionPause(260, epoch)) return;
+  scene.classList.add('duel-clash');
+  if (!await motionPause(battle.captureObjective ? 340 : 520, epoch)) return;
+  if (!battle.captureObjective) {
+    const attackerCard = stage.querySelector('.duel-attacker');
+    const defenderCard = stage.querySelector('.duel-defender');
+    if (battle.outcome !== 'attacker') attackerCard?.classList.add('is-defeated');
+    if (battle.outcome !== 'defender') defenderCard?.classList.add('is-defeated');
+    if (battle.outcome === 'attacker') attackerCard?.classList.add('is-victor');
+    if (battle.outcome === 'defender') defenderCard?.classList.add('is-victor');
+  }
+  scene.classList.add('duel-finished');
+  if (!await motionPause(720, epoch)) return;
+  scene.classList.add('duel-settle');
+  if (!await motionPause(130, epoch)) return;
+  scene.classList.add('duel-closing');
+  if (!await motionPause(220, epoch)) return;
+  scene.remove();
+  if (visualMotion.scene === scene) visualMotion.scene = null;
+}
+
+window.dominiusVisualizeOnlineAction = (event, players) => {
+  if (!event || !cinematicMotion()) return;
+  if (event.kind === 'move') {
+    const destination = motionCell(event.x, event.y);
+    if (!destination) return;
+    destination.classList.add('motion-destination', 'motion-dust');
+    window.setTimeout(() => destination.classList.remove('motion-destination', 'motion-dust'), 460);
+    return;
+  }
+  if (event.kind !== 'combat') return;
+  const attackerFaction = players[event.seat]?.faction;
+  const defenderFaction = players[1 - event.seat]?.faction;
+  const attackerConfig = PIECE_CONFIG[event.attackerRole];
+  const defenderConfig = PIECE_CONFIG[event.defenderRole];
+  if (!attackerFaction || !defenderFaction || !attackerConfig || !defenderConfig) return;
+  const actor = (factionKey, roleKey, config) => ({
+    factionKey, roleKey, rank: config.rank,
+    isTrap: Boolean(config.isTrap), isObjective: Boolean(config.isObjective),
+    name: FACTIONS[factionKey].names[roleKey],
+  });
+  const attacker = actor(attackerFaction, event.attackerRole, attackerConfig);
+  const defender = actor(defenderFaction, event.defenderRole, defenderConfig);
+  void playCombatScene(attacker, defender,
+    { outcome: event.outcome, captureObjective: Boolean(event.captureObjective) }, visualMotion.epoch);
+};
 
 async function animateCombatPresentation(attacker, defender, epoch) {
   state.selectedPiece = null;
@@ -656,21 +760,28 @@ async function animateCombatPresentation(attacker, defender, epoch) {
   const target = route.destination.querySelector('.piece');
   const battle = resolveBattle(attacker, defender);
   const distance = Math.hypot(route.dx, route.dy) || 1;
-  const lunge = `translate(${route.dx / distance * route.size * .22}px, ${route.dy / distance * route.size * .22}px)`;
-  if (!await motionTween(route.element, [{ transform: 'none' }, { transform: lunge }], 180, epoch)) return;
+  const lunge = `translate(${route.dx * .82}px, ${route.dy * .82}px) scale(1.08)`;
+  if (!await motionTween(route.element, [
+    { transform: 'translate(0, 0) scale(1)' },
+    { transform: `translate(${-route.dx / distance * route.size * .12}px, ${-route.dy / distance * route.size * .12}px) scale(.97)`, offset: .18 },
+    { transform: lunge, offset: 1 },
+  ], 240, epoch)) return;
 
   const disarm = defender.isTrap && attacker.rank === 3;
-  route.destination.classList.add(disarm ? 'motion-disarm' : defender.isTrap ? 'motion-explosion' : 'motion-impact');
+  route.destination.classList.add(battle.captureObjective ? 'motion-victory'
+    : disarm ? 'motion-disarm' : defender.isTrap ? 'motion-explosion' : 'motion-impact');
   // Mesmos efeitos sonoros, agora disparados junto ao impacto visual.
   if (!battle.captureObjective) {
     if (disarm) audioManager?.playDesarme?.();
     else if (defender.isTrap) audioManager?.playExplosao?.();
     else audioManager?.playEspadas?.();
   }
-  if (!await motionTween(target, disarm
+  if (!battle.captureObjective && !await motionTween(target, disarm
     ? [{ opacity: 1 }, { opacity: .75 }, { opacity: 1 }]
     : [{ transform: 'none' }, { transform: 'translateX(-4px)' },
       { transform: 'translateX(4px)' }, { transform: 'none' }], 140, epoch)) return;
+  await playCombatScene(attacker, defender, battle, epoch);
+  if (epoch !== visualMotion.epoch) return;
 
   const fade = (element, transform = 'none') => motionTween(element,
     [{ opacity: 1, transform }, { opacity: 0, transform: `${transform === 'none' ? '' : transform} scale(.78)` }], 360, epoch);
@@ -713,8 +824,15 @@ function performAnimatedAction(piece, x, y, target = null, bot = false) {
     if (bot && !await motionPause(300, epoch)) return;
     if (target) return animateCombatPresentation(piece, target, epoch);
     const route = motionRoute(piece, x, y);
-    if (!await motionTween(route.element, [{ transform: 'none' },
-      { transform: `translate(${route.dx}px, ${route.dy}px)` }], 420, epoch)) return;
+    if (!await motionTween(route.element, [
+      { transform: 'translate(0, 0) scale(1)', offset: 0 },
+      { transform: `translate(${-route.dx * .06}px, ${-route.dy * .06}px) scale(.97)`, offset: .12 },
+      { transform: `translate(${route.dx * .78}px, ${route.dy * .78}px) scale(1.07)`, offset: .7 },
+      { transform: `translate(${route.dx * 1.04}px, ${route.dy * 1.04}px) scale(1.03)`, offset: .9 },
+      { transform: `translate(${route.dx}px, ${route.dy}px) scale(1)`, offset: 1 },
+    ], 460, epoch)) return;
+    route.destination.classList.add('motion-landing');
+    if (!await motionPause(35, epoch)) return;
     movePiece(piece, x, y);
     if (bot && !await motionPause(180, epoch)) return;
     finishTurn();

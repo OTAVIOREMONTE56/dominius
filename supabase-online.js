@@ -28,7 +28,7 @@
   dialog.append(chat);
   const messages=q('online-messages'), input=q('online-message'), chatStatus=q('online-chat-status');
   let user=null,roomId=null,seat=null,last=null,draft=null,channel=null,heartbeat=null,fallback=null;
-  let epoch=0,busy=false,refreshRunning=false,refreshAgain=false,boardOpen=false,lastVersion=-1,lastChatId=0,chatBusy=false,pendingChat=null;
+  let epoch=0,busy=false,refreshRunning=false,refreshAgain=false,boardOpen=false,lastVersion=-1,lastChatId=0,lastVisualMoveId=0,chatBusy=false,pendingChat=null;
   let attaching=null,chatLoading=false,chatAgain=false,realtimeReady=false;
   const storage={get:key=>{try{return sessionStorage.getItem(key);}catch{return null;}},set:(key,value)=>{try{sessionStorage.setItem(key,value);}catch{}},remove:key=>{try{sessionStorage.removeItem(key);}catch{}}};
   const roomKey=()=>`dominius-supabase-room:${user?.id}`;
@@ -94,6 +94,10 @@
     }else if(!dialog.open){els.gameScreen.querySelector('.right-panel').append(chat);}
     const latest=last.moves.at(-1);
     if(oldVersion>=0&&latest&&latest.turn_number>oldVersion)playActionSound(latest.event);
+    if(latest){
+      if(oldVersion>=0&&latest.id>lastVisualMoveId)window.dominiusVisualizeOnlineAction?.(latest.event,players);
+      lastVisualMoveId=Math.max(lastVisualMoveId,latest.id);
+    }
   }
   function playActionSound(e) {
     if(e.kind==='move')window.audioManager?.playPassos?.();
@@ -171,7 +175,7 @@
   async function connectRoom(id) {
     const cleanup=detach(),generation=epoch;
     await cleanup;if(generation!==epoch)return;
-    roomId=id;storage.set(roomKey(),id);lastVersion=-1;
+    roomId=id;storage.set(roomKey(),id);lastVersion=-1;lastVisualMoveId=0;
     const db=await cloud.client();if(generation!==epoch)return;
     const current=()=>generation===epoch&&roomId===id;
     const changed=()=>{if(current())refresh();};
@@ -198,7 +202,7 @@
   async function detach() {
     epoch++;clearInterval(heartbeat);clearInterval(fallback);
     const old=channel;channel=null;realtimeReady=false;chatAgain=false;
-    roomId=null;seat=null;last=null;draft=null;lastVersion=-1;lastChatId=0;boardOpen=false;refreshAgain=false;
+    roomId=null;seat=null;last=null;draft=null;lastVersion=-1;lastChatId=0;lastVisualMoveId=0;boardOpen=false;refreshAgain=false;
     toolbar.hidden=true;chat.hidden=true;messages.replaceChildren();input.value='';pendingChat=null;
     els.randomizeBtn.disabled=false;els.confirmArmyBtn.disabled=false;els.restartBtn.textContent='Reiniciar partida';
     actions.hidden=false;q('online-room-info').hidden=true;q('online-account').hidden=false;
