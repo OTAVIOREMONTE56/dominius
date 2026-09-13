@@ -566,13 +566,14 @@ function getSetupValidMoves(piece) {
 // Apresentação apenas: regras e mutações continuam nas funções originais.
 const visualMotion = {
   busy: false, freeze: false, endPending: false, epoch: 0,
-  animations: new Set(), timers: new Map(), controls: [], scene: null,
+  animations: new Set(), timers: new Map(), controls: [], scene: null, overlays: new Set(),
 };
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-const cinematicMotion = () => {
+const visualEffectsEnabled = () => {
   const effects = window.audioManager?.getState?.();
-  return !reducedMotion() && effects?.enabled !== false && effects?.effectsVolume !== 0;
+  return effects?.enabled !== false && effects?.effectsVolume !== 0;
 };
+const cinematicMotion = () => !reducedMotion() && visualEffectsEnabled();
 const motionCell = (x, y) => els.board.querySelector(`[data-x="${x}"][data-y="${y}"]`);
 
 function motionPause(ms, epoch) {
@@ -599,12 +600,114 @@ async function motionTween(element, frames, duration, epoch) {
 function clearMotionEffects() {
   visualMotion.scene?.remove();
   visualMotion.scene = null;
+  visualMotion.overlays.forEach((overlay) => overlay.remove());
+  visualMotion.overlays.clear();
+  els.board.classList.remove('motion-battle-zoom');
   visualMotion.animations.forEach((animation) => animation.cancel());
   visualMotion.animations.clear();
   visualMotion.controls.forEach(([control, disabled]) => { control.disabled = disabled; });
   visualMotion.controls = [];
   els.board.classList.remove('motion-busy');
   els.board.removeAttribute('aria-busy');
+}
+
+function motionOverlay(element) {
+  document.body.appendChild(element);
+  visualMotion.overlays.add(element);
+  return element;
+}
+
+function removeMotionOverlay(element) {
+  element?.remove();
+  visualMotion.overlays.delete(element);
+}
+
+async function playEnemyRevealAnimation(piece, cell, epoch, confirmedCombat = false) {
+  if (!visualEffectsEnabled() || !cell || (!confirmedCombat && !cell.querySelector('.hidden-piece'))) return true;
+  const bounds = (cell.querySelector('.piece') || cell).getBoundingClientRect();
+  const overlay = document.createElement('div');
+  overlay.className = 'enemy-reveal';
+  overlay.dataset.faction = piece.factionKey || state.players[piece.playerIndex]?.faction;
+  overlay.style.cssText = `left:${bounds.left}px;top:${bounds.top}px;width:${bounds.width}px;height:${bounds.height}px`;
+  overlay.innerHTML = '<span class="reveal-back">?</span>';
+  motionOverlay(overlay);
+  overlay.classList.add('reveal-flipping');
+  if (!await motionPause(300, epoch)) return false;
+  overlay.innerHTML = '';
+  const image = document.createElement('img');
+  image.src = FACTIONS[overlay.dataset.faction].images[piece.roleKey];
+  image.alt = '';
+  overlay.appendChild(image);
+  if (!piece.isTrap && !piece.isObjective) {
+    const rank = document.createElement('span');
+    rank.className = 'reveal-rank';
+    rank.textContent = piece.rank;
+    overlay.appendChild(rank);
+  }
+  overlay.classList.add('reveal-front');
+  if (!await motionPause(330, epoch)) return false;
+  removeMotionOverlay(overlay);
+  return true;
+}
+
+async function playTurnIntroAnimation(factionKey, epoch = visualMotion.epoch) {
+  if (!visualEffectsEnabled() || !FACTIONS[factionKey]) return;
+  const banner = document.createElement('div');
+  banner.className = 'motion-turn-banner';
+  banner.style.setProperty('--motion-color', FACTIONS[factionKey].color);
+  banner.textContent = `TURNO DOS ${FACTIONS[factionKey].label.toUpperCase()}`;
+  els.board.parentElement.appendChild(banner);
+  visualMotion.overlays.add(banner);
+  if (await motionPause(850, epoch)) removeMotionOverlay(banner);
+}
+
+async function playBattleStartAnimation(epoch = visualMotion.epoch) {
+  if (!visualEffectsEnabled()) return;
+  const intro = document.createElement('div');
+  intro.className = 'motion-battle-intro';
+  intro.innerHTML = '<strong>A BATALHA COMEÇA</strong><span>Que vença o melhor estrategista.</span>';
+  els.board.parentElement.appendChild(intro);
+  visualMotion.overlays.add(intro);
+  els.board.classList.add('motion-battle-zoom');
+  if (await motionPause(1250, epoch)) {
+    els.board.classList.remove('motion-battle-zoom');
+    removeMotionOverlay(intro);
+  }
+}
+
+function pulseLostPiecesCounter(playerIndex) {
+  const panel = document.getElementById('lost-pieces-panel');
+  const counter = panel?.open
+    ? els.lostPieces?.children[playerIndex]?.querySelector('.lost-player-header strong')
+    : panel?.querySelector('summary');
+  if (!counter) return;
+  counter.style.setProperty('--lost-glow', FACTIONS[state.players[playerIndex]?.faction]?.color || '#eab862');
+  counter.classList.remove('motion-lost-pulse');
+  void counter.offsetWidth;
+  counter.classList.add('motion-lost-pulse');
+  window.setTimeout(() => counter.classList.remove('motion-lost-pulse'), 500);
+}
+
+async function animateLostPiece(piece, origin, epoch) {
+  if (!visualEffectsEnabled() || !origin) return;
+  const panel = document.getElementById('lost-pieces-panel');
+  const destination = panel?.open
+    ? els.lostPieces?.children[piece.playerIndex]?.querySelector('.lost-player-header strong')
+    : panel?.querySelector('summary');
+  if (!destination) return;
+  const from = origin.getBoundingClientRect ? origin.getBoundingClientRect() : origin;
+  const to = destination.getBoundingClientRect();
+  const image = document.createElement('img');
+  image.className = 'motion-lost-portrait';
+  image.src = FACTIONS[piece.factionKey].images[piece.roleKey];
+  image.alt = '';
+  image.style.cssText = `left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px;--lost-x:${to.left + to.width / 2 - from.left - from.width / 2}px;--lost-y:${to.top + to.height / 2 - from.top - from.height / 2}px`;
+  motionOverlay(image);
+  image.classList.add('motion-lost-flying');
+  if (await motionPause(550, epoch)) {
+    removeMotionOverlay(image);
+    pulseLostPiecesCounter(piece.playerIndex);
+  }
 }
 
 function cancelVisualMotion() {
@@ -724,12 +827,14 @@ async function playCombatScene(attacker, defender, battle, epoch) {
 }
 
 window.dominiusVisualizeOnlineAction = (event, players) => {
-  if (!event || !cinematicMotion()) return;
+  if (!event || !visualEffectsEnabled()) return;
+  const epoch = visualMotion.epoch;
   if (event.kind === 'move') {
     const destination = motionCell(event.x, event.y);
     if (!destination) return;
     destination.classList.add('motion-destination', 'motion-dust');
     window.setTimeout(() => destination.classList.remove('motion-destination', 'motion-dust'), 460);
+    void playTurnIntroAnimation(players[1 - event.seat]?.faction, epoch);
     return;
   }
   if (event.kind !== 'combat') return;
@@ -738,18 +843,37 @@ window.dominiusVisualizeOnlineAction = (event, players) => {
   const attackerConfig = PIECE_CONFIG[event.attackerRole];
   const defenderConfig = PIECE_CONFIG[event.defenderRole];
   if (!attackerFaction || !defenderFaction || !attackerConfig || !defenderConfig) return;
-  const actor = (factionKey, roleKey, config) => ({
-    factionKey, roleKey, rank: config.rank,
+  const actor = (factionKey, roleKey, config, playerIndex) => ({
+    factionKey, roleKey, rank: config.rank, playerIndex,
     isTrap: Boolean(config.isTrap), isObjective: Boolean(config.isObjective),
     name: FACTIONS[factionKey].names[roleKey],
   });
-  const attacker = actor(attackerFaction, event.attackerRole, attackerConfig);
-  const defender = actor(defenderFaction, event.defenderRole, defenderConfig);
-  void playCombatScene(attacker, defender,
-    { outcome: event.outcome, captureObjective: Boolean(event.captureObjective) }, visualMotion.epoch);
+  const attacker = actor(attackerFaction, event.attackerRole, attackerConfig, event.seat);
+  const defender = actor(defenderFaction, event.defenderRole, defenderConfig, 1 - event.seat);
+  void (async () => {
+    const cell = motionCell(event.x, event.y);
+    if (cell && !await playEnemyRevealAnimation(defender, cell, epoch, true)) return;
+    await playCombatScene(attacker, defender,
+      { outcome: event.outcome, captureObjective: Boolean(event.captureObjective) }, epoch);
+    if (epoch !== visualMotion.epoch || event.captureObjective) return;
+    const origin = cell?.getBoundingClientRect();
+    const lost = [event.outcome !== 'attacker' && attacker,
+      event.outcome !== 'defender' && defender].filter(Boolean);
+    await Promise.all(lost.map((piece) => animateLostPiece(piece, origin, epoch)));
+    if (epoch === visualMotion.epoch && state.winner === null)
+      void playTurnIntroAnimation(players[1 - event.seat]?.faction, epoch);
+  })();
+};
+
+window.dominiusVisualizeOnlineBattleStart = (factionKey) => {
+  const epoch = visualMotion.epoch;
+  void playBattleStartAnimation(epoch).then(() => {
+    if (epoch === visualMotion.epoch) return playTurnIntroAnimation(factionKey, epoch);
+  });
 };
 
 async function animateCombatPresentation(attacker, defender, epoch) {
+  if (!await playEnemyRevealAnimation(defender, motionCell(defender.x, defender.y), epoch)) return;
   state.selectedPiece = null;
   state.validMoves = [];
   state.combatReveal = { attackerId: attacker.id, defenderId: defender.id };
@@ -793,6 +917,10 @@ async function animateCombatPresentation(attacker, defender, epoch) {
   await Promise.all(effects);
   if (epoch !== visualMotion.epoch) return;
 
+  const lostOrigins = [
+    battle.outcome !== 'attacker' && [attacker, route.element.getBoundingClientRect()],
+    battle.outcome !== 'defender' && [defender, target.getBoundingClientRect()],
+  ].filter(Boolean);
   state.combatReveal = null;
   applyBattleResult(attacker, defender, battle.outcome);
   addLog(battle.reason, battle.outcome === 'attacker' ? 'success' : 'alert');
@@ -810,6 +938,9 @@ async function animateCombatPresentation(attacker, defender, epoch) {
     else audioManager?.playDerrota?.();
     return;
   }
+  renderLostPieces();
+  await Promise.all(lostOrigins.map(([piece, origin]) => animateLostPiece(piece, origin, epoch)));
+  if (epoch !== visualMotion.epoch) return;
   if (state.gameMode === 'bot' && state.currentTurn === 1 && !await motionPause(180, epoch)) return;
   finishTurn();
 }
@@ -868,6 +999,7 @@ function finishTurn() {
   }
 
   render();
+  void playTurnIntroAnimation(state.players[state.currentTurn].faction);
 }
 
 function movePiece(piece, targetX, targetY) {
@@ -980,6 +1112,8 @@ function startBattle() {
   });
   addLog('A batalha começou. Os exércitos se enfrentam em segredo.', 'success');
   render();
+  const firstFaction = state.players[0]?.faction;
+  void playBattleStartAnimation().then(() => playTurnIntroAnimation(firstFaction));
 }
 
 

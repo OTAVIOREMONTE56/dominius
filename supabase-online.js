@@ -69,7 +69,7 @@
     if(!last||!boardOpen||last.players.length<2)return;
     const preparing=last.match.phase==='setup',me=last.players[seat];
     if(!force&&lastVersion===last.match.version)return;
-    const oldVersion=lastVersion;lastVersion=last.match.version;
+    const oldVersion=lastVersion,oldPhase=state.phase;lastVersion=last.match.version;
     cancelVisualMotion();
     const pieces=last.pieces.map(describePiece);
     if(preparing&&!me.ready){ensureDraft();pieces.push(...draft.map(describePiece));}
@@ -82,6 +82,8 @@
       log:last.moves.slice().reverse().map(m=>({text:moveText(m),type:m.event.kind==='combat'?'success':''}))});
     els.startScreen.classList.add('hidden');els.gameScreen.classList.remove('hidden');toolbar.hidden=false;
     render();
+    if(oldVersion>=0&&oldPhase!=='battle'&&last.match.phase==='battle')
+      window.dominiusVisualizeOnlineBattleStart?.(players[0].faction);
     els.randomizeBtn.disabled=me.ready||busy;els.confirmArmyBtn.disabled=me.ready||busy;
     els.restartBtn.textContent='Sair da sala';
     // O botão desenhado na arte continua ativo: volta ao lobby para nova sala.

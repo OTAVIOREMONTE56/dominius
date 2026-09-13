@@ -3085,3 +3085,115 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
   .duel-finished .duel-card.is-defeated::after { animation: none; }
   .duel-scene, .duel-card, .duel-result { transition: none; }
 }
+
+/* Camada visual transitória; nunca modifica as peças ou o tabuleiro. */
+#game-screen > .board-shell { position: relative; }
+.enemy-reveal {
+  position: fixed;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--reveal-color, #c8a668);
+  border-radius: 50%;
+  background: #15201c;
+  box-shadow: 0 0 14px var(--reveal-color, #c8a668);
+  color: #fff;
+  font: 700 1.3em Georgia, serif;
+  transform: perspective(280px) rotateY(0);
+  pointer-events: none;
+  overflow: hidden;
+}
+.enemy-reveal[data-faction="romanos"] { --reveal-color: #2868b2; }
+.enemy-reveal[data-faction="orcs"] { --reveal-color: #b33240; }
+.enemy-reveal[data-faction="elfos"] { --reveal-color: #299563; }
+.enemy-reveal[data-faction="anoes"] { --reveal-color: #df812f; }
+.enemy-reveal[data-faction="egipcios"] { --reveal-color: #d6ad38; }
+.enemy-reveal.reveal-flipping { animation: enemyFlip 600ms ease-in-out both; }
+.enemy-reveal img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.enemy-reveal .reveal-rank {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  min-width: 1.25em;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--reveal-color);
+  font: 700 clamp(9px, 1vw, 13px) Georgia, serif;
+}
+@keyframes enemyFlip {
+  0% { transform: perspective(280px) rotateY(0) scale(1); }
+  12% { transform: perspective(280px) rotateY(-9deg) scale(1.1); }
+  50% { transform: perspective(280px) rotateY(90deg) scale(1.08); }
+  100% { transform: perspective(280px) rotateY(360deg) scale(1); }
+}
+.motion-turn-banner, .motion-battle-intro {
+  position: absolute;
+  z-index: 500;
+  left: 50%;
+  top: 45%;
+  width: min(92%, 650px);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-align: center;
+  color: #f8ebc7;
+  text-shadow: 0 2px 8px #000;
+}
+.motion-turn-banner {
+  padding: 10px 16px;
+  border-block: 1px solid #d0aa67;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--motion-color), #09130f 50%) 20% 80%, transparent);
+  box-shadow: 0 0 17px var(--motion-color);
+  font: 700 clamp(13px, 2vw, 23px) Georgia, serif;
+  letter-spacing: .11em;
+  animation: motionBanner 850ms ease-in-out both;
+}
+.motion-battle-intro {
+  display: grid;
+  gap: 7px;
+  padding: 24px 10px;
+  background: radial-gradient(ellipse, #07100edb 20%, #07100e77 65%, transparent 85%);
+  animation: motionBanner 1250ms ease-in-out both;
+}
+.motion-battle-intro::before {
+  content: '';
+  position: absolute;
+  inset: -8px 12%;
+  background: radial-gradient(circle at 18% 24%, #f5d78d 0 2px, transparent 4px),
+    radial-gradient(circle at 77% 32%, #f5d78d 0 2px, transparent 4px),
+    radial-gradient(circle at 59% 77%, #f5d78d 0 1px, transparent 3px);
+  opacity: .6;
+  pointer-events: none;
+}
+.motion-battle-intro strong { font: 700 clamp(19px, 3vw, 34px) Georgia, serif; letter-spacing: .1em; }
+.motion-battle-intro span { font: 400 clamp(11px, 1.4vw, 16px) Georgia, serif; }
+#board.motion-battle-zoom { transform: scale(1.018); filter: brightness(.82); transition: transform 550ms ease, filter 550ms ease; }
+@keyframes motionBanner {
+  0% { opacity: 0; transform: translate(-54%, -50%) scale(.97); }
+  20%, 75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-46%, -50%) scale(1.01); }
+}
+.motion-lost-portrait {
+  position: fixed;
+  z-index: 700;
+  border: 2px solid #cfaf74;
+  border-radius: 50%;
+  object-fit: cover;
+  pointer-events: none;
+  box-shadow: 0 0 12px #e4b777;
+}
+.motion-lost-portrait.motion-lost-flying { animation: lostFlight 550ms ease-in-out both; }
+@keyframes lostFlight {
+  to { opacity: 0; transform: translate(var(--lost-x), var(--lost-y)) scale(.22); }
+}
+.motion-lost-pulse { animation: lostPulse 500ms ease-out; }
+@keyframes lostPulse {
+  35% { transform: scale(1.12); color: #ffe9aa; text-shadow: 0 0 12px var(--lost-glow, #eab862); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .enemy-reveal, .motion-turn-banner, .motion-battle-intro,
+  .motion-lost-portrait, .motion-lost-pulse { animation-duration: 1ms !important; }
+  #board.motion-battle-zoom { transform: none; filter: none; transition: none; }
+}
