@@ -114,7 +114,43 @@ function getAvailableSetupCells(playerIndex) {
   ).filter(({ x, y }) => !state.board[y][x].blocked);
 }
 
+const factionCrestSelectors = {
+  romanos: '.realm-roman svg', orcs: '.realm-orc svg', elfos: '.realm-elf svg',
+  anoes: '.realm-dwarf svg', egipcios: '.realm-egypt svg',
+};
+const factionStandardImages = {
+  romanos: 'assets/faccoes/romanos.png', orcs: 'assets/faccoes/orcs.png',
+  elfos: 'assets/faccoes/elfos.png', anoes: 'assets/faccoes/anoes.png',
+  egipcios: 'assets/faccoes/egipcios.png',
+};
+
+function factionCrest(factionKey) {
+  const art = document.createElement('span');
+  art.className = 'faction-standard-art';
+  const image = document.createElement('img');
+  image.className = 'faction-standard-image';
+  image.alt = '';
+  image.decoding = 'async';
+  const fallback = document.querySelector(factionCrestSelectors[factionKey])?.cloneNode(true);
+  if (fallback) {
+    fallback.classList.add('faction-crest-icon', 'faction-standard-fallback');
+    fallback.setAttribute('aria-hidden', 'true');
+    fallback.setAttribute('focusable', 'false');
+    fallback.style.display = 'none';
+    image.addEventListener('error', () => {
+      image.style.display = 'none';
+      fallback.style.display = 'block';
+    }, { once: true });
+  }
+  art.appendChild(image);
+  if (fallback) art.appendChild(fallback);
+  image.src = factionStandardImages[factionKey];
+  return art;
+}
+
 function renderPlayersSummary() {
+  const previousCardFactions = [...els.playersSummary.querySelectorAll('.player-card')]
+    .map(card => card.dataset.faction);
   els.playersSummary.innerHTML = '';
 
   state.players.forEach((player, index) => {
@@ -125,20 +161,30 @@ function renderPlayersSummary() {
     const remaining = PIECES_PER_PLAYER - lost;
     const banner = document.querySelectorAll('.player-banner')[index];
     if (banner) {
+      const factionChanged = banner.dataset.faction !== player.faction;
+      banner.dataset.faction = player.faction;
+      banner.style.setProperty('--commander-color', faction.color);
+      banner.querySelector('.banner-kicker').textContent = player.name;
       banner.querySelector('.banner-counter').textContent = `${remaining} / ${PIECES_PER_PLAYER}`;
       banner.querySelector('.banner-name').textContent = faction.label;
+      const bannerCrest = banner.querySelector('.banner-crest');
+      if (factionChanged || !bannerCrest.querySelector('.faction-standard-image')) {
+        bannerCrest.replaceChildren(factionCrest(player.faction));
+        bannerCrest.classList.remove('crest-arrive');
+        void bannerCrest.offsetWidth;
+        bannerCrest.classList.add('crest-arrive');
+      }
     }
 
     const card = document.createElement('div');
     card.className = `player-card ${index === activePlayerIndex ? 'active' : ''}`;
+    card.dataset.faction = player.faction;
+    card.style.setProperty('--commander-color', faction.color);
 
     const html = `
       <div class="player-card-header">
-        <strong>${player.name}</strong>
-        <span class="faction-tag">
-          <span class="faction-badge" style="background:${faction.color}"></span>
-          ${faction.label}
-        </span>
+        <span class="player-card-emblem" aria-hidden="true"></span>
+        <span class="player-card-identity"><strong>${player.name}</strong><span class="faction-tag">${faction.label}</span></span>
       </div>
       <ul>
         <li><span>Peças</span><strong>${remaining} / ${PIECES_PER_PLAYER}</strong></li>
@@ -148,6 +194,10 @@ function renderPlayersSummary() {
     `;
 
     card.innerHTML = html;
+    const cardCrest = factionCrest(player.faction);
+    const cardEmblem = card.querySelector('.player-card-emblem');
+    cardEmblem.appendChild(cardCrest);
+    if (previousCardFactions[index] !== player.faction) cardEmblem.classList.add('crest-arrive');
     els.playersSummary.appendChild(card);
   });
 }

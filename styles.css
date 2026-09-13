@@ -3197,3 +3197,393 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
   .motion-lost-portrait, .motion-lost-pulse { animation-duration: 1ms !important; }
   #board.motion-battle-zoom { transform: none; filter: none; transition: none; }
 }
+
+/* Identidade da partida: brasões já usados no menu e hierarquia compacta. */
+#game-screen { --battle-heading-font: var(--font-title); --battle-ui-font: var(--font-ui); }
+#game-screen :is(.section-heading h2, .title-banner h1, .setup-meta h3, .info-card h3) {
+  font-family: var(--battle-heading-font);
+  font-weight: 600;
+  letter-spacing: .075em;
+}
+#game-screen :is(.section-heading .eyebrow, .hud .eyebrow, .setup-meta .eyebrow) {
+  font-family: var(--battle-ui-font);
+  font-size: clamp(9px, .72vw, 11px);
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #d7bc82;
+}
+#game-screen :is(.left-panel, .right-panel) .section-heading h2 {
+  margin-top: 4px;
+  font-size: clamp(16px, 1.35vw, 21px);
+  color: #f3dcaa;
+  text-shadow: 0 2px 6px #000a;
+}
+#game-screen :is(.left-panel, .right-panel) .section-heading::after {
+  content: '';
+  display: block;
+  height: 1px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, #d8b76f, #d8b76f42 76%, transparent);
+}
+#game-screen .player-banner {
+  border: 1px solid #c0a269;
+  background: linear-gradient(110deg,
+    color-mix(in srgb, var(--commander-color, #2868b2) 36%, #111c19) 0%,
+    #101815e8 74%);
+  box-shadow: inset 0 1px #f7e4b442, inset 0 0 0 2px #e1c27a16, 0 4px 12px #0006;
+}
+#game-screen .player-banner-right {
+  background: linear-gradient(250deg,
+    color-mix(in srgb, var(--commander-color, #b33240) 36%, #111c19) 0%,
+    #101815e8 74%);
+}
+#game-screen .banner-crest {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid #dfc182;
+  border-radius: 9px 9px 12px 12px;
+  background: radial-gradient(circle at 50% 20%, #f8e1a839, transparent 56%),
+    linear-gradient(145deg, color-mix(in srgb, var(--commander-color, #2868b2) 60%, #1a201b), #111915);
+  box-shadow: inset 0 0 0 2px #362b1b, inset 0 1px 4px #fff1c044, 0 2px 5px #0008;
+}
+#game-screen .faction-crest-icon {
+  display: block;
+  width: 72%;
+  height: 72%;
+  fill: none;
+  stroke: #f4db9e;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px #000c);
+}
+#game-screen .banner-kicker {
+  font-family: var(--battle-ui-font);
+  font-size: clamp(9px, .66vw, 11px);
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: #eee1c5;
+}
+#game-screen .banner-name {
+  font-family: var(--battle-heading-font);
+  font-size: clamp(13px, 1.05vw, 17px);
+  line-height: 1.08;
+  letter-spacing: .07em;
+  font-weight: 700;
+  color: #fff0c9;
+  text-shadow: 0 1px 3px #000b;
+}
+#game-screen .banner-counter {
+  font-family: var(--battle-ui-font);
+  font-size: clamp(12px, 1vw, 16px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f7e3b6;
+  border: 1px solid #b69a68;
+  border-radius: 5px;
+  background: #101513c9;
+}
+#game-screen .player-card {
+  border: 1px solid #a98c5b7a;
+  border-left: 3px solid var(--commander-color, #2868b2);
+  background: linear-gradient(125deg,
+    color-mix(in srgb, var(--commander-color, #2868b2) 16%, #202821d9),
+    #101714d9 80%);
+  box-shadow: inset 0 1px #f3dfa922, 0 4px 9px #0005;
+}
+#game-screen .player-card:nth-child(2) {
+  border-left-color: var(--commander-color, #b33240);
+  background: linear-gradient(125deg,
+    color-mix(in srgb, var(--commander-color, #b33240) 16%, #202821d9),
+    #101714d9 80%);
+}
+#game-screen .player-card.active { border-color: #d0ad6f; border-left-color: var(--commander-color); }
+#game-screen .player-card-header { justify-content: flex-start; gap: 8px; margin-bottom: 7px; }
+#game-screen .player-card-emblem {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 38px;
+  flex: 0 0 34px;
+  border: 1px solid #c5a76b;
+  border-radius: 6px 6px 9px 9px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--commander-color) 55%, #24251e), #1a1e1a);
+  box-shadow: inset 0 0 0 2px #e8cb8320, 0 2px 4px #0008;
+}
+#game-screen .player-card-identity { display: grid; min-width: 0; gap: 2px; }
+#game-screen .player-card-identity > strong {
+  font-family: var(--battle-ui-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: #f5ebd8;
+}
+#game-screen .player-card-identity .faction-tag {
+  font-family: var(--battle-heading-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: #eac989;
+}
+#game-screen .player-card li { gap: 6px; font-family: var(--battle-ui-font); font-size: 11px; }
+#game-screen .player-card li span { color: #c9c5b8; }
+#game-screen .player-card li strong { font-variant-numeric: tabular-nums; font-weight: 650; }
+#game-screen .hud .eyebrow { margin-bottom: 3px; }
+#game-screen .hud h2 {
+  margin-top: 3px;
+  font-family: var(--battle-heading-font);
+  font-size: clamp(15px, 1.2vw, 18px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: .055em;
+  color: #f3dfae;
+}
+#game-screen .hud > :first-child::after {
+  content: '';
+  display: block;
+  width: min(180px, 80%);
+  height: 1px;
+  margin-top: 5px;
+  background: linear-gradient(90deg, #d5b573, transparent);
+}
+#game-screen .info-card h3 { margin: 0 0 8px; font-size: clamp(13px, 1.1vw, 17px); color: #f1d6a0; }
+#game-screen .info-card p { color: #d1cfbf; font-family: var(--battle-ui-font); font-size: 12px; line-height: 1.45; }
+#game-screen .info-grid { gap: 8px; }
+#game-screen .info-grid span { color: #c8c3b5; font-family: var(--battle-ui-font); font-size: 10px; }
+#game-screen .info-grid strong { color: #efe4cb; font-family: var(--battle-ui-font); font-size: 11px; }
+#game-screen :is(.hud-actions button, .setup-actions button, #restart-btn, #test-audio-btn) {
+  font-family: var(--battle-ui-font);
+  font-weight: 700;
+  letter-spacing: .025em;
+}
+#game-screen .lost-pieces-panel { border-color: #b89b62; }
+#game-screen .lost-pieces-panel summary {
+  font-family: var(--battle-heading-font);
+  font-size: clamp(11px, .9vw, 14px);
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: #f2dda8;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+#game-screen .lost-pieces-panel summary:hover { background-color: #d0aa5520; color: #fff0c7; }
+@media (max-width: 760px) {
+  #game-screen .banner-crest { width: 32px; height: 32px; flex-basis: 32px; }
+  #game-screen .banner-name { font-size: clamp(11px, 2.9vw, 14px); }
+  #game-screen .banner-kicker { font-size: 9px; }
+  #game-screen .banner-counter { font-size: 11px; padding: 5px; }
+  #game-screen .player-card-emblem { width: 30px; height: 33px; flex-basis: 30px; }
+  #game-screen .hud h2 { font-size: 14px; }
+}
+
+/* Escudos heráldicos: os cinco símbolos SVG do menu ganham campo e aro próprios. */
+#game-screen > .top-banner { overflow: visible; }
+#game-screen .player-banner {
+  position: relative;
+  overflow: visible;
+  padding-left: 70px;
+}
+#game-screen .banner-crest,
+#game-screen .player-card-emblem {
+  --shield-cut: polygon(8% 0, 92% 0, 100% 9%, 100% 63%, 83% 84%, 50% 100%, 17% 84%, 0 63%, 0 9%);
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 0;
+  clip-path: var(--shield-cut);
+  background: linear-gradient(125deg, #f4e3bb 0%, #a77b3c 18%, #f3d595 35%, #71532e 64%, #dcc085 82%, #76522e 100%);
+  box-shadow: none;
+  filter: drop-shadow(0 2px 3px #000b);
+  isolation: isolate;
+}
+#game-screen .banner-crest {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  width: 54px;
+  height: 58px;
+  transform: translateY(-50%);
+}
+#game-screen .player-card-emblem { width: 38px; height: 42px; flex-basis: 38px; }
+#game-screen .banner-crest::before,
+#game-screen .player-card-emblem::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 3px;
+  clip-path: var(--shield-cut);
+  background: radial-gradient(circle at 48% 19%, #f3e6b137, transparent 53%),
+    linear-gradient(155deg,
+      color-mix(in srgb, var(--commander-color, #2868b2) 75%, #17221c) 0%,
+      color-mix(in srgb, var(--commander-color, #2868b2) 38%, #0b1414) 58%,
+      #0b1211 100%);
+  box-shadow: inset 0 0 0 1px #f2d89988, inset 0 -8px 12px #080d0ba8;
+}
+#game-screen .banner-crest::after,
+#game-screen .player-card-emblem::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 6px 7px 10px;
+  border-top: 1px solid #fff3c466;
+  border-bottom: 1px solid #070c0999;
+  pointer-events: none;
+}
+#game-screen :is(.banner-crest, .player-card-emblem) .faction-crest-icon {
+  position: relative;
+  z-index: 1;
+  width: 76%;
+  height: 68%;
+  margin-top: -4px;
+  fill: none;
+  stroke: #ffedb9;
+  stroke-width: 2.8;
+  filter: drop-shadow(0 2px 1px #000e) drop-shadow(0 0 3px #f6d38966);
+}
+#game-screen .player-card-emblem .faction-crest-icon { stroke-width: 3.1; }
+@media (max-width: 760px) {
+  #game-screen .player-banner { flex-wrap: nowrap; gap: 3px; padding-left: 44px; }
+  #game-screen .banner-crest { left: 5px; width: 35px; height: 39px; }
+  #game-screen .player-card-emblem { width: 32px; height: 36px; flex-basis: 32px; }
+  #game-screen .banner-counter { min-width: 0; padding: 4px; font-size: 10px; }
+  #game-screen .banner-copy { min-width: 0; }
+}
+
+/* Estandartes oficiais: arte transparente sem aro ou recorte adicional. */
+#game-screen :is(.banner-crest, .player-card-emblem) {
+  clip-path: none;
+  overflow: visible;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  filter: none;
+  isolation: auto;
+}
+#game-screen :is(.banner-crest, .player-card-emblem)::before,
+#game-screen :is(.banner-crest, .player-card-emblem)::after { content: none; }
+#game-screen .banner-crest { width: 54px; height: 62px; }
+#game-screen .player-card-emblem { width: 40px; height: 44px; flex-basis: 40px; }
+#game-screen .faction-standard-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+#game-screen .faction-standard-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px #000b) drop-shadow(0 0 3px var(--commander-color));
+}
+#game-screen .faction-standard-fallback {
+  width: 70%;
+  height: 70%;
+}
+#game-screen .crest-arrive { animation: faction-standard-arrive 360ms ease-out both; }
+@keyframes faction-standard-arrive {
+  from { opacity: 0; scale: .92; }
+  to { opacity: 1; scale: 1; }
+}
+@media (max-width: 760px) {
+  #game-screen .banner-crest { width: 35px; height: 42px; }
+  #game-screen .player-card-emblem { width: 32px; height: 36px; flex-basis: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #game-screen .crest-arrive { animation: none; }
+}
+
+/* Refinamento tipográfico da interface de batalha, sem mudar sua geometria. */
+#game-screen {
+  --battle-ivory: #f0e6d2;
+  --battle-gold: #e7ca91;
+  --battle-muted: #c4bdb0;
+  color: var(--battle-ivory);
+}
+#game-screen :is(.title-banner h1, .section-heading h2, .hud h2, .setup-meta h3,
+  .info-card h3, .lost-pieces-panel summary) {
+  font-family: var(--battle-heading-font);
+  font-weight: 600;
+  letter-spacing: .065em;
+  color: var(--battle-gold);
+  text-shadow: 0 1px 2px #0009;
+}
+#game-screen .title-banner h1 { font-weight: 700; letter-spacing: .105em; color: #f2dcaa; }
+#game-screen .title-banner .eyebrow { font-family: var(--battle-heading-font); font-weight: 500; letter-spacing: .11em; color: #d7bf90; }
+#game-screen :is(.section-heading .eyebrow, .hud .eyebrow, .setup-meta .eyebrow) {
+  font-weight: 600;
+  letter-spacing: .105em;
+  color: #cdb98f;
+}
+#game-screen .hud h2 { letter-spacing: .055em; }
+#game-screen .setup-meta h3 { letter-spacing: .045em; }
+#game-screen :is(.banner-kicker, .player-card-identity > strong) {
+  font-family: var(--battle-ui-font);
+  font-weight: 600;
+  letter-spacing: .025em;
+  color: var(--battle-muted);
+}
+#game-screen :is(.banner-name, .player-card-identity .faction-tag) {
+  font-family: var(--battle-heading-font);
+  font-weight: 700;
+  letter-spacing: .045em;
+  color: #f0d59f;
+}
+#game-screen .player-card li { letter-spacing: 0; }
+#game-screen .player-card li span { color: var(--battle-muted); font-weight: 400; }
+#game-screen .player-card li strong { color: var(--battle-ivory); font-weight: 700; }
+#game-screen .player-card li:last-child strong { color: #e7ca91; }
+#game-screen .info-card h3 { font-weight: 600; letter-spacing: .045em; }
+#game-screen .info-card p {
+  font-family: var(--battle-ui-font);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: #d8d1c4;
+}
+#game-screen .info-card p:first-of-type { color: var(--battle-ivory); font-weight: 500; }
+#game-screen .info-grid span { color: var(--battle-muted); letter-spacing: 0; }
+#game-screen .info-grid strong { color: var(--battle-ivory); font-weight: 650; }
+#game-screen :is(.hud-actions button, .setup-actions button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: .025em;
+  color: var(--battle-ivory);
+  text-shadow: 0 1px 1px #0008;
+}
+#game-screen #randomize-btn { font-family: var(--battle-heading-font); font-weight: 600; color: #f2ddaf; }
+#game-screen #confirm-army-btn {
+  font-family: var(--battle-heading-font);
+  font-weight: 700;
+  letter-spacing: .045em;
+  color: #241b0e;
+  text-shadow: 0 1px #fff5ce70;
+}
+#game-screen #restart-btn {
+  font-family: var(--battle-heading-font);
+  font-weight: 600;
+  letter-spacing: .025em;
+  border-color: #aa9065;
+  background: linear-gradient(180deg, #3b392d, #252a24);
+  color: #e9d3a5;
+}
+#game-screen #restart-btn:hover { border-color: #ddbd7d; background: linear-gradient(180deg, #4b4330, #2d3127); }
+#game-screen :is(.audio-controls button, .volume-control) {
+  font-family: var(--battle-ui-font);
+  font-weight: 600;
+  letter-spacing: .015em;
+  color: #e5dccb;
+}
+#game-screen .volume-control span { white-space: nowrap; }
+#game-screen .lost-pieces-panel summary { letter-spacing: .06em; }
+@media (max-width: 760px) {
+  #game-screen :is(.hud-actions button, .setup-actions button) { letter-spacing: .005em; }
+  #game-screen :is(.section-heading h2, .hud h2, .setup-meta h3) { letter-spacing: .035em; }
+}
