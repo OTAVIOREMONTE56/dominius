@@ -12,7 +12,7 @@ test('two DOM clients: local/BOT preserved, online preparation, chat, movement a
       return db.query(sql,params);
     });queue=work.catch(()=>{});return work;
   };
-  const keys={dominius_create_room:['p_faction'],dominius_join_room:['p_code','p_faction'],dominius_snapshot:['p_room'],
+  const keys={dominius_create_room:['p_faction'],dominius_join_room:['p_code','p_faction'],dominius_wager_offer:['p_code'],dominius_snapshot:['p_room'],
     dominius_confirm_army:['p_room','p_pieces'],dominius_move:['p_room','p_piece','p_x','p_y','p_version','p_request'],
     dominius_chat:['p_room','p_body','p_request'],dominius_heartbeat:['p_room'],dominius_leave:['p_room']};
   const until=async(fn,label)=>{for(let i=0;i<200;i++){if(fn())return;await new Promise(r=>setTimeout(r,10));}throw Error(label);};

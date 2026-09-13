@@ -115,7 +115,7 @@ const server=http.createServer(async(req,res)=>{
       const result=api(JSON.parse(body));res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(result));return;
     }
     const file=decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname);
-    if(!/^\/(index\.html|app\.js|game-rules\.js|multiplayer\.js|styles\.css|multiplayer\.css|tutorial\.(js|css)|supabase-(config\.js|client\.js|online\.js|online\.css)|vendor\/supabase\.js|account\.(js|css)|bot\.js|audioManager\.js|assets\/[\w./ -]+)$/.test(file)||file.split('/').includes('..')) {res.writeHead(404);res.end();return;}
+    if(!/^\/(index\.html|app\.js|game-rules\.js|multiplayer\.js|styles\.css|multiplayer\.css|tutorial\.(js|css)|supabase-(config\.js|client\.js|online\.js|online\.css)|vendor\/supabase\.js|account\.(js|css)|economy\.(js|css)|bot\.js|audioManager\.js|assets\/[\w./ -]+)$/.test(file)||file.split('/').includes('..')) {res.writeHead(404);res.end();return;}
     const full=path.join(__dirname,file);
     if(!fs.existsSync(full)||!fs.statSync(full).isFile()) {res.writeHead(404);res.end();return;}
     res.writeHead(200,{'Content-Type':mime[path.extname(full)]||'application/octet-stream'});fs.createReadStream(full).pipe(res);

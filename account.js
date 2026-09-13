@@ -10,9 +10,21 @@
     if(current&&mode!=='password') {
       view.innerHTML=`<h2 id="account-view-title">PERFIL DO COMANDANTE</h2><p id="auth-name"></p><p id="auth-email"></p>
         <p class="account-copy">Sua conta está conectada. Escolha BATALHA ONLINE para jogar.</p>
+        <p class="coin-balance"><span aria-hidden="true">♛</span> COROAS <strong data-coin-balance>—</strong></p>
+        <h3>HISTÓRICO DE COROAS</h3><ul class="coin-history" id="account-coin-history"></ul>
         <p role="status"></p><button class="account-button" data-auth="logout">SAIR DA CONTA</button>`;
       view.querySelector('#auth-name').textContent=current.user.user_metadata?.display_name||'Comandante';
-      view.querySelector('#auth-email').textContent=current.user.email;return;
+      view.querySelector('#auth-email').textContent=current.user.email;
+      const profileUser=current.user.id;
+      window.DominiusEconomy?.wallet().then(() => window.DominiusEconomy.history()).then(rows => {
+        if(current?.user.id!==profileUser || !view.querySelector('#account-coin-history'))return;
+        const names={initial_balance:'Saldo inicial',online_win_reward:'Vitória online',wager_lock:'Entrada em batalha',wager_win:'Pote conquistado',wager_refund:'Reembolso de empate',admin_adjustment:'Ajuste'};
+        const list=view.querySelector('#account-coin-history');list.replaceChildren();
+        for(const row of rows){const li=document.createElement('li'),description=document.createElement('span'),date=document.createElement('time');
+          description.textContent=`${row.amount>0?'+':''}${window.DominiusEconomy.format(row.amount)} · ${names[row.type]||row.type}`;
+          date.dateTime=row.created_at;date.textContent=new Date(row.created_at).toLocaleString('pt-BR');li.append(description,date);list.append(li);}
+      }).catch(error=>message(error.message));
+      return;
     }
     const register=mode==='register',recover=mode==='recover',password=mode==='password';
     view.innerHTML=`<h2 id="account-view-title">${register?'CRIAR CONTA':recover?'RECUPERAR SENHA':password?'NOVA SENHA':'ENTRAR'}</h2>

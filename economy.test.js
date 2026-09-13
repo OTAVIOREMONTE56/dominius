@@ -1,0 +1,114 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {PGlite}=require('@electric-sql/pglite');
+
+test('Coroas: initial balance, atomic wager, settlement, refund and idempotency',async()=>{
+  const db=new PGlite();
+  const users=['00000000-0000-0000-0000-000000000011','00000000-0000-0000-0000-000000000012','00000000-0000-0000-0000-000000000013'];
+  const one=async(sql,args=[])=>Object.values((await db.query(sql,args)).rows[0])[0];
+  const as=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
+  const admin=()=>db.exec('reset role');
+  const balance=async id=>{await as(id);return Number(await one('select balance from public.wallets where user_id=$1',[id]));};
+  const code=async room=>{await admin();return one('select code from public.rooms where id=$1',[room]);};
+  const roles={objective:1,trap:6,rank10:1,rank9:1,rank8:2,rank7:3,rank6:4,rank5:4,rank4:4,rank3:5,rank2:8,rank1:1};
+  const army=seat=>Object.entries(roles).flatMap(([role,n])=>Array(n).fill(role)).map((role,i)=>({role,x:i%10,y:Math.floor(i/10)+seat*6}));
+  const confirm=async(room,seat,id)=>{await as(id);await db.query('select public.dominius_confirm_army($1,$2::jsonb)',[room,JSON.stringify(army(seat))]);};
+  const room=async(wager=0)=>{await as(users[0]);const r=await one(wager?"select public.dominius_create_wager_room('romanos',$1)":"select public.dominius_create_room('romanos')",wager?[wager]:[]);
+    const c=await code(r);await as(users[1]);await db.query("select public.dominius_join_room($1,'orcs')",[c]);return r;};
+  try{
+    await db.exec(`create role anon;create role authenticated;create schema auth;
+      create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}');
+      create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+      grant usage on schema auth to authenticated,anon;grant execute on function auth.uid() to authenticated,anon;`);
+    const sql=fs.readFileSync('supabase-setup.sql','utf8');await db.exec(sql);await db.exec(sql);
+    for(const id of users)await db.query('insert into auth.users(id) values($1)',[id]);
+    assert.equal(await balance(users[0]),500);
+    assert.equal(await balance(users[1]),500);
+    await as(users[0]);assert.equal(await one('select count(*) from public.wallets'),1,'RLS hides other wallets');
+    await assert.rejects(db.query('update public.wallets set balance=9999'));
+    await assert.rejects(db.query("insert into public.coin_transactions(user_id,amount,type,balance_after) values($1,900,'admin_adjustment',1400)",[users[0]]));
+    await assert.rejects(db.query("update public.matches set phase='finished',winner=0,wager_amount=500,pot_amount=1000,wager_status='settled'"));
+    await assert.rejects(db.query('delete from public.wallets'));
+    await assert.rejects(db.query('delete from public.coin_transactions'));
+    await admin();
+    for(const table of ['matches','wallets','coin_transactions'])for(const action of ['INSERT','UPDATE','DELETE'])
+      assert.equal(await one('select has_table_privilege($1,$2,$3)', ['authenticated',`public.${table}`,action]),false,`${table} ${action} blocked`);
+    assert.equal(await one("select has_function_privilege('authenticated','dominius_private.change_coins(uuid,bigint,text,uuid,jsonb)','EXECUTE')"),false);
+    assert.equal(await one("select has_function_privilege('authenticated','dominius_private.match_economy()','EXECUTE')"),false);
+    assert.equal(await one("select relrowsecurity from pg_class where oid='public.wallets'::regclass"),true);
+    assert.equal(await one("select relrowsecurity from pg_class where oid='public.coin_transactions'::regclass"),true);
+    assert.equal(await one("select relrowsecurity from pg_class where oid='public.matches'::regclass"),true);
+    const poor=await room(500);
+    const free=await room();
+    await as(users[0]);assert.equal(await one("select public.dominius_join_room($1,'elfos')",[await code(free)]),free);
+    await admin();assert.equal(Number(await one('select count(*) from public.room_players where room_id=$1',[free])),2,'same account cannot occupy both seats');
+    await confirm(free,1,users[1]);await confirm(free,0,users[0]);
+    await admin();await db.query("update public.matches set phase='finished',winner=0 where room_id=$1",[free]);
+    assert.equal(await balance(users[0]),550);assert.equal(await balance(users[1]),500);
+    await admin();await db.query("update public.matches set version=version+1 where room_id=$1",[free]);
+    assert.equal(await balance(users[0]),550,'duplicate updates do not pay again');
+    const wager=await room(100);await confirm(wager,1,users[1]);await confirm(wager,0,users[0]);
+    assert.equal(await balance(users[0]),450);assert.equal(await balance(users[1]),400);
+    await admin();assert.equal(Number(await one('select pot_amount from public.matches where room_id=$1',[wager])),200);
+    await db.query("update public.matches set phase='finished',winner=1 where room_id=$1",[wager]);
+    assert.equal(await balance(users[0]),450);assert.equal(await balance(users[1]),600);
+    await admin();await db.query('update public.matches set version=version+1 where room_id=$1',[wager]);
+    assert.equal(await balance(users[1]),600);
+    const tie=await room(100);await confirm(tie,1,users[1]);await confirm(tie,0,users[0]);
+    await admin();await db.query("update public.matches set phase='finished',winner=null where room_id=$1",[tie]);
+    assert.equal(await balance(users[0]),450);assert.equal(await balance(users[1]),600);
+    await admin();await db.query('update public.matches set version=version+1 where room_id=$1',[tie]);
+    assert.equal(await balance(users[0]),450);
+    await confirm(poor,1,users[1]);
+    await assert.rejects(confirm(poor,0,users[0]),/Saldo de Coroas insuficiente/);
+    await admin();assert.equal(await one('select phase from public.matches where room_id=$1',[poor]),'setup');
+    assert.equal(await balance(users[1]),600,'failed lock leaves both balances intact');
+    const leave=await room(50);await confirm(leave,1,users[1]);await confirm(leave,0,users[0]);
+    await as(users[0]);await db.query('select public.dominius_leave($1)',[leave]);
+    assert.equal(await balance(users[1]),650,'official abandonment awards pot');
+    await admin();assert.equal(await one('select count(*) from public.coin_transactions where match_id=(select id from public.matches where room_id=$1) and type=$2',[leave,'wager_win']),1);
+    const secondFails=await room(50);
+    await confirm(secondFails,0,users[0]);
+    await admin();await db.query('update public.wallets set balance=100 where user_id=$1',[users[0]]);
+    await db.query('update public.wallets set balance=0 where user_id=$1',[users[1]]);
+    await assert.rejects(confirm(secondFails,1,users[1]),/Saldo de Coroas insuficiente/);
+    await admin();
+    assert.equal(Number(await one('select balance from public.wallets where user_id=$1',[users[0]])),100,'second failure rolls back first debit');
+    assert.equal(Number(await one("select count(*) from public.coin_transactions where match_id=(select id from public.matches where room_id=$1) and type='wager_lock'",[secondFails])),0);
+    assert.equal(await one('select phase from public.matches where room_id=$1',[secondFails]),'setup');
+    await assert.rejects(db.query("update public.matches set pot_amount=1 where room_id=$1",[secondFails]),'invalid pot is rejected');
+    await db.query('update public.wallets set balance=500 where user_id in ($1,$2)',users.slice(0,2));
+    const ledgerFailure=await room(50);await confirm(ledgerFailure,0,users[0]);
+    await admin();await db.exec(`create function public.reject_coin_test() returns trigger language plpgsql as $$begin
+      if new.type='wager_lock' then raise exception 'ledger unavailable'; end if; return new; end $$;
+      create trigger reject_coin_test before insert on public.coin_transactions for each row execute function public.reject_coin_test();`);
+    await assert.rejects(confirm(ledgerFailure,1,users[1]),/ledger unavailable/);
+    await admin();assert.equal(Number(await one('select balance from public.wallets where user_id=$1',[users[0]])),500,'ledger failure rolls back wallet');
+    assert.equal(Number(await one('select balance from public.wallets where user_id=$1',[users[1]])),500);
+    await db.exec('drop trigger reject_coin_test on public.coin_transactions;drop function public.reject_coin_test()');
+    const matchId=await one('select id from public.matches where room_id=$1',[wager]);
+    await assert.rejects(db.query("insert into public.coin_transactions(user_id,amount,type,match_id,balance_after) values($1,-100,'wager_lock',$2,0)",[users[0],matchId]),'unique key prevents a duplicate lock');
+  }finally{await db.close();}
+});
+
+test('standalone Coroas migration installs twice over the existing game schema',async()=>{
+  const db=new PGlite();
+  try{
+    await db.exec(`create role anon;create role authenticated;create schema auth;
+      create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}');
+      create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+      grant usage on schema auth to authenticated,anon;grant execute on function auth.uid() to authenticated,anon;`);
+    const complete=fs.readFileSync('supabase-setup.sql','utf8');
+    const start=complete.indexOf('-- DOMINIUS ECONOMY / COROAS');
+    const end=complete.indexOf('-- Revogar EXECUTE padrão',start);
+    const migration=fs.readFileSync('supabase-economy.sql','utf8');
+    assert.equal(migration,`begin;\n${complete.slice(start,end)}commit;\n`);
+    await db.exec(complete.slice(0,start)+complete.slice(end));
+    const user='00000000-0000-0000-0000-000000000021';
+    await db.query('insert into auth.users(id) values($1)',[user]);
+    await db.exec(migration);await db.exec(migration);
+    assert.equal(Number((await db.query('select balance from public.wallets where user_id=$1',[user])).rows[0].balance),500);
+    assert.equal(Number((await db.query("select count(*) from public.coin_transactions where user_id=$1 and type='initial_balance'",[user])).rows[0].count),1);
+  }finally{await db.close();}
+});

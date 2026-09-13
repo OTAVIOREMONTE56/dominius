@@ -1,0 +1,23 @@
+.coin-balance { display: inline-flex; align-items: center; gap: 7px; color: #eed49a; font: 600 12px var(--font-ui); letter-spacing: .05em; }
+.coin-balance[hidden] { display: none; }
+.coin-balance strong { color: #fff0c8; font-variant-numeric: tabular-nums; }
+.coin-balance > span { display: inline-grid; place-items: center; width: 23px; height: 23px; border: 1px solid #d5b879; border-radius: 50%; background: linear-gradient(145deg,#796035,#2e281b); color: #ffe1a0; font-size: 15px; }
+#coin-balance-badge { position: absolute; z-index: 6; top: 12px; left: 12px; padding: 5px 9px; border: 1px solid #b4945d88; border-radius: 6px; background: #111713d9; }
+.coin-gain { animation: coin-gain 1.3s ease-out; }
+@keyframes coin-gain { 25% { filter: drop-shadow(0 0 7px #f8d46a); } 100% { filter: none; } }
+.coin-history { padding-left: 0; list-style: none; max-height: 220px; overflow: auto; font: 12px var(--font-ui); }
+.coin-history li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid #a88d5438; }
+.coin-history time { color: #baa988; white-space: nowrap; }
+.wager-options { display: flex; gap: 6px; flex-wrap: wrap; }
+.wager-options label { margin: 0 !important; }
+.wager-options input { position: absolute; opacity: 0; }
+.wager-options span { display: inline-block; padding: 8px 12px; border: 1px solid #ad8d54; border-radius: 5px; cursor: pointer; }
+.wager-options input:checked + span { background: #8a692e; color: #fff1c3; }
+.wager-options input:disabled + span { opacity: .4; cursor: not-allowed; }
+.online-economy { padding: 10px; border: 1px solid #a88d5477; border-radius: 6px; background: #171a18b8; }
+.online-economy h3 { margin: 4px 0; font: 600 15px var(--font-title); color: #e6c58b; }
+.online-economy p { margin: 5px 0; }
+.online-economy [hidden] { display: none !important; }
+.end-coin-result { margin-top: 8px; color: #ead094; font: 600 13px var(--font-title); }
+@media (max-width: 760px) { #coin-balance-badge { top: 5px; left: 5px; font-size: 10px; } .wager-options span { padding: 6px 9px; } }
+@media (prefers-reduced-motion: reduce) { .coin-gain { animation: none; } }
