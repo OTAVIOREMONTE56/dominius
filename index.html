@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css?v=visual-layer-1" />
     <link rel="stylesheet" href="account.css" />
     <link rel="stylesheet" href="supabase-online.css" />
+    <link rel="stylesheet" href="tutorial.css?v=tutorial-1" />
   </head>
   <body>
     <div id="app">
@@ -37,7 +38,7 @@
             <h2 id="battle-heading">BATALHA</h2>
             <button class="menu-button menu-button-featured" type="button" data-menu-mode="bot" aria-haspopup="dialog"><span>Contra o BOT</span><small>Enfrente um exército rival</small></button>
             <button class="menu-button" type="button" data-menu-mode="pvp" aria-haspopup="dialog"><span>Batalha Local</span><small>Dois jogadores · um dispositivo</small></button>
-            <button class="menu-button" type="button" disabled><span>Treinamento</span><small>Em breve</small></button>
+            <button id="training-entry" class="menu-button" type="button"><span>Treinamento</span><small>Aprenda a comandar seu exército</small></button>
             <p class="menu-panel-foot">Sua estratégia. Seu domínio.</p>
           </section>
           <section class="menu-panel" aria-labelledby="multiplayer-heading">
@@ -45,6 +46,7 @@
             <p class="menu-kicker">ALÉM DAS FRONTEIRAS</p>
             <h2 id="multiplayer-heading">MULTIPLAYER</h2>
             <button id="online-entry" class="menu-button menu-button-featured" type="button" aria-haspopup="dialog" aria-controls="online-lobby"><span>BATALHA ONLINE</span><small>Crie uma sala e convide seu adversário</small></button>
+            <button id="account-register-entry" class="menu-button" type="button" data-account-register aria-haspopup="dialog" aria-controls="account-dialog"><span>CRIAR CONTA</span><small>Crie seu comandante e prepare-se para batalhas online</small></button>
             <p class="menu-panel-foot">Dois comandantes. Uma batalha entre reinos.</p>
           </section>
         </div>
@@ -59,7 +61,6 @@
           </ul>
         </div>
         <footer class="menu-footer" aria-label="Opções adicionais">
-          <button id="account-profile-link" type="button" data-account-open aria-haspopup="dialog" aria-controls="account-dialog">PERFIL<small>Conta online</small></button>
           <button type="button" disabled>AMIGOS<small>Em breve</small></button>
           <span class="menu-footer-seal" aria-hidden="true">◆</span>
           <button type="button" disabled>RANKING<small>Em breve</small></button>
@@ -193,6 +194,11 @@
             <summary>Peças perdidas <span class="lost-arrow" aria-hidden="true"></span></summary>
             <div id="lost-pieces" class="lost-pieces"></div>
           </details>
+          <section id="tutorial-panel" class="tutorial-panel hidden" aria-live="polite">
+            <div class="tutorial-progress"><span>TREINAMENTO</span><span id="tutorial-step">LIÇÃO 1 DE 8</span></div>
+            <h2 id="tutorial-title"></h2><p id="tutorial-copy"></p><p id="tutorial-feedback"></p>
+            <div class="tutorial-actions"><button id="tutorial-continue" type="button" hidden>PULAR INSTRUÇÃO</button><button id="tutorial-guide" type="button">GUIA DE PEÇAS</button><button id="tutorial-exit" type="button">SAIR DO TREINAMENTO</button></div>
+          </section>
         </main>
 
         <aside class="panel right-panel">
@@ -235,15 +241,22 @@
 
         </div>
       </div>
+      <div id="tutorial-overlay" class="tutorial-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tutorial-overlay-title">
+        <div class="tutorial-overlay-card"><p class="menu-kicker">TREINAMENTO</p><h2 id="tutorial-overlay-title"></h2><p id="tutorial-overlay-copy"></p><div id="tutorial-overlay-actions"></div></div>
+      </div>
+      <div id="tutorial-guide-overlay" class="tutorial-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tutorial-guide-title">
+        <div class="tutorial-overlay-card tutorial-guide-card"><h2 id="tutorial-guide-title">GUIA DE PEÇAS</h2><div id="tutorial-guide-list"></div><button id="tutorial-guide-close" type="button">VOLTAR AO TREINAMENTO</button></div>
+      </div>
     </div>
 
     <script src="audioManager.js"></script>
     <script src="bot.js"></script>
     <script src="game-rules.js?v=all-faction-portraits-1"></script>
-    <script src="app.js?v=visual-layer-1"></script>
+    <script src="app.js?v=tutorial-1"></script>
+    <script src="tutorial.js?v=tutorial-1"></script>
     <script src="supabase-config.js?v=pvnhfxqvypxxiakdbctf"></script>
     <script src="supabase-client.js?v=2"></script>
-    <script src="account.js?v=2"></script>
+    <script src="account.js?v=tutorial-1"></script>
     <script src="supabase-online.js?v=visual-layer-1"></script>
   </body>
 </html>

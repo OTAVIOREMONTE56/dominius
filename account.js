@@ -1,11 +1,12 @@
 // Supabase Auth: conta independente das regras locais e do BOT.
 (() => {
-  const dialog=document.getElementById('account-dialog'),view=document.getElementById('account-view'),entry=document.getElementById('account-entry');
+  const dialog=document.getElementById('account-dialog'),view=document.getElementById('account-view'),entry=document.getElementById('account-entry'),registerEntry=document.getElementById('account-register-entry');
   let current=null,mode='login',busy=false;
   const message=text=>{const el=view.querySelector('[role="status"]');if(el)el.textContent=text;};
   const reportError=error=>message(DominiusCloud.errorMessage(error));
   function draw() {
     entry.textContent=current?'CONTA / PERFIL':'CONTA / ENTRAR';
+    if(registerEntry){registerEntry.querySelector('span').textContent=current?'MEU PERFIL':'CRIAR CONTA';registerEntry.querySelector('small').textContent=current?'Gerencie sua conta online':'Crie seu comandante e prepare-se para batalhas online';}
     if(current&&mode!=='password') {
       view.innerHTML=`<h2 id="account-view-title">PERFIL DO COMANDANTE</h2><p id="auth-name"></p><p id="auth-email"></p>
         <p class="account-copy">Sua conta está conectada. Escolha BATALHA ONLINE para jogar.</p>
@@ -24,8 +25,8 @@
       <button class="account-button" type="button" data-auth="${mode==='login'?'register':'login'}">${mode==='login'?'CRIAR CONTA':'VOLTAR PARA ENTRAR'}</button></div>
       ${mode==='login'?'<button type="button" class="account-link" data-auth="recover">ESQUECI MINHA SENHA</button>':''}</form>`;
   }
-  async function open() {
-    mode='login';draw();if(!dialog.open)dialog.showModal();
+  async function open(modeToOpen='login') {
+    mode=modeToOpen;draw();if(!dialog.open)dialog.showModal();
     try{current=await DominiusCloud.session();draw();}catch(error){reportError(error);}
   }
   dialog.addEventListener('submit',async event=>{
@@ -63,9 +64,11 @@
     }else{mode=action;draw();}
   });
   dialog.addEventListener('close',()=>view.querySelectorAll('[type="password"]').forEach(el=>el.value=''));
-  document.querySelectorAll('[data-account-open]').forEach(el=>el.addEventListener('click',open));
+  document.querySelectorAll('[data-account-open]').forEach(el=>el.addEventListener('click',()=>open()));
+  registerEntry?.addEventListener('click',()=>open('register'));
   window.addEventListener('dominius-auth',event=>{
     current=event.detail.session;entry.textContent=current?'CONTA / PERFIL':'CONTA / ENTRAR';
+    if(registerEntry){registerEntry.querySelector('span').textContent=current?'MEU PERFIL':'CRIAR CONTA';registerEntry.querySelector('small').textContent=current?'Gerencie sua conta online':'Crie seu comandante e prepare-se para batalhas online';}
     if(event.detail.event==='PASSWORD_RECOVERY'){mode='password';draw();if(!dialog.open)dialog.showModal();}
   });
   window.DominiusAccount={open};

@@ -1,0 +1,82 @@
+.tutorial-active #game-screen .left-panel,
+.tutorial-active #game-screen .right-panel,
+.tutorial-active #game-screen #setup-controls { display: none !important; }
+.tutorial-active #game-screen {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-areas: "top" "board" !important;
+}
+.tutorial-active #game-screen > .top-banner { grid-column: 1 !important; grid-row: 1 !important; }
+.tutorial-active #game-screen > .board-shell { grid-column: 1 !important; grid-row: 2 !important; margin-inline: auto !important; width: min(100%, 700px) !important; }
+.tutorial-panel {
+  position: fixed;
+  z-index: 450;
+  right: max(12px, env(safe-area-inset-right));
+  top: 88px;
+  width: min(310px, 26vw);
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid #b99b65;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #233027ed, #111b19f2);
+  box-shadow: 0 12px 28px #0008, inset 0 0 18px #bba16715;
+  color: #f2e3c0;
+  font-family: Georgia, serif;
+}
+.tutorial-panel.hidden, .tutorial-overlay.hidden { display: none !important; }
+.tutorial-progress { display: flex; justify-content: space-between; gap: 8px; color: #d6b879; font-size: 11px; letter-spacing: .08em; }
+.tutorial-panel h2 { margin: 10px 0 6px; color: #f7e8c9; font: 700 clamp(16px, 1.5vw, 21px) Georgia, serif; }
+.tutorial-panel p { margin: 0 0 8px; font: 14px/1.4 Georgia, serif; }
+.tutorial-panel #tutorial-feedback { min-height: 1.4em; color: #e5bf70; }
+.tutorial-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.tutorial-actions button, .tutorial-overlay button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #ab8954;
+  border-radius: 5px;
+  background: linear-gradient(#554126, #302418);
+  color: #f8e5bd;
+  font: 700 11px Georgia, serif;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+.tutorial-actions button:hover, .tutorial-overlay button:hover { filter: brightness(1.15); }
+.tutorial-nudge { animation: tutorialNudge 300ms ease-out; }
+@keyframes tutorialNudge { 30% { transform: translateX(-4px); } 65% { transform: translateX(4px); } }
+#board > .cell.tutorial-piece > .piece { animation: tutorialPulse 1300ms ease-in-out infinite; }
+#board > .cell.tutorial-target { outline: 3px solid #e5bf70; outline-offset: -4px; box-shadow: inset 0 0 19px #e5bf7088; }
+#board > .cell.tutorial-target::before {
+  content: '➤'; position: absolute; z-index: 5; top: -13px; left: 50%;
+  transform: translateX(-50%) rotate(90deg); color: #ffdb8d; font: 700 25px Georgia, serif;
+  text-shadow: 0 0 7px #000;
+  pointer-events: none;
+}
+@keyframes tutorialPulse { 50% { filter: brightness(1.27) drop-shadow(0 0 9px #f5cd76); } }
+.tutorial-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  display: grid; place-items: center; padding: 16px;
+  background: #07100ebb;
+}
+.tutorial-overlay-card {
+  width: min(460px, 100%); box-sizing: border-box; padding: clamp(20px, 4vw, 34px);
+  border: 1px solid #c4a36b; border-radius: 12px;
+  background: linear-gradient(135deg, #293329, #111a19);
+  color: #f1dfbb; text-align: center; box-shadow: 0 20px 55px #000b, 0 0 25px #d6ad3833;
+}
+.tutorial-overlay-card h2 { margin: 9px 0 13px; font: 700 clamp(22px, 4vw, 32px) Georgia, serif; }
+.tutorial-overlay-card p { font: 16px/1.5 Georgia, serif; }
+#tutorial-overlay-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 22px; }
+.tutorial-guide-card { width: min(680px, 100%); max-height: min(82svh, 740px); overflow: auto; }
+#tutorial-guide-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 12px 0; text-align: left; }
+.tutorial-guide-piece { display: flex; align-items: center; gap: 8px; padding: 5px; border: 1px solid #aa8d5540; border-radius: 5px; }
+.tutorial-guide-piece img { width: 42px; height: 42px; flex: none; object-fit: cover; border: 2px solid #bfa167; border-radius: 50%; }
+.tutorial-guide-piece p { margin: 0; font: 12px/1.3 Georgia, serif; }
+@media (max-width: 760px) {
+  .tutorial-panel { top: auto; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 16px)); max-height: 30svh; overflow: auto; padding: 10px; }
+  .tutorial-panel h2 { font-size: 15px; margin: 5px 0; }
+  .tutorial-panel p { font-size: 12px; }
+  .tutorial-actions button { min-height: 32px; font-size: 10px; }
+  #tutorial-guide-list { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #board > .cell.tutorial-piece > .piece, .tutorial-nudge { animation: none; }
+}

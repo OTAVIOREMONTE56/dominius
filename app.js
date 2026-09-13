@@ -470,6 +470,10 @@ function renderEndScreen() {
     return;
   }
 
+  if (state.gameMode === 'tutorial') {
+    els.endScreen.classList.add('hidden');
+    return;
+  }
   const hasWinner = state.winner !== null;
   const winner = hasWinner ? state.players[state.winner] : null;
 
@@ -936,6 +940,7 @@ async function animateCombatPresentation(attacker, defender, epoch) {
     if (!await motionPause(700, epoch)) return;
     if (state.winner === 0) audioManager?.playVitoria?.();
     else audioManager?.playDerrota?.();
+    if (state.gameMode === 'tutorial') window.dominiusTutorial?.onActionComplete?.();
     return;
   }
   renderLostPieces();
@@ -981,6 +986,13 @@ function selectPiece(piece) {
 }
 
 function finishTurn() {
+  if (state.gameMode === 'tutorial') {
+    state.selectedPiece = null;
+    state.validMoves = [];
+    render();
+    window.dominiusTutorial?.onActionComplete?.();
+    return;
+  }
   state.currentTurn = state.currentTurn === 0 ? 1 : 0;
   state.selectedPiece = null;
   state.validMoves = [];
@@ -1208,6 +1220,7 @@ function handleBattleCellClick(x, y) {
 }
 
 function handleCellClick(x, y) {
+  if (state.gameMode === 'tutorial') return window.dominiusTutorial?.handleCellClick(x, y);
   if (window.dominiusMultiplayer?.active) return window.dominiusMultiplayer.click(x, y);
   if (visualMotion.busy) return;
   if (isSetupPhase()) {

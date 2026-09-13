@@ -52,6 +52,8 @@ test('account registration, network retry, login, restored session, recovery and
   const q=s=>w.document.querySelector(s);
   const tick=()=>new Promise(r=>setTimeout(r,10));
   const submit=async()=>{const form=q('#auth-form');if(form.elements.email)form.elements.email.value='player@example.test';if(form.elements.password)form.elements.password.value='password123';form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();};
+  q('#account-register-entry').click();await tick();
+  assert.equal(q('#account-view-title').textContent,'CRIAR CONTA');
   await w.DominiusAccount.open();q('[data-auth="register"]').click();q('#auth-name').value='Jogador';
   await submit();assert.match(q('[role="status"]').textContent,/alcançar o Supabase/);
   assert.equal(q('#auth-password').value,'');assert.equal(q('[type="submit"]').disabled,false);
