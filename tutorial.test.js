@@ -14,6 +14,18 @@ test('eight tutorial lessons use real moves and combat, then leave or start BOT'
     vm.runInContext(fs.readFileSync(file, 'utf8'), dom.getInternalVMContext());
   assert.equal(w.document.getElementById('account-profile-link'), null);
   assert(w.document.querySelector('#multiplayer-heading + #online-entry + #account-register-entry'));
+  const battlePanel = w.document.querySelector('#battle-heading').closest('.menu-panel');
+  assert.deepEqual([...battlePanel.querySelectorAll('.menu-button span')].map(label => label.textContent),
+    ['Contra o BOT', 'Treinamento']);
+  assert.equal(w.document.querySelector('[data-menu-mode="pvp"]'), null);
+  assert.equal(w.document.getElementById('game-mode').closest('.selector-card').hidden, true);
+  const preparation = w.document.getElementById('menu-preparation');
+  preparation.showModal = () => { preparation.open = true; };
+  preparation.close = () => { preparation.open = false; };
+  battlePanel.querySelector('[data-menu-mode="bot"]').click();
+  assert.equal(w.document.getElementById('game-mode').value, 'bot');
+  assert.equal(preparation.open, true);
+  preparation.close();
   w.eval('motionTween=async()=>true; motionPause=async()=>true; playCombatScene=async()=>{}');
   w.eval(`window.tutorialResults=[];
     const originalTutorialComplete=window.dominiusTutorial.onActionComplete;

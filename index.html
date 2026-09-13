@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DOMINIUS</title>
-    <link rel="stylesheet" href="styles.css?v=battle-typography-1" />
+    <link rel="stylesheet" href="styles.css?v=menu-battle-3" />
     <link rel="stylesheet" href="account.css" />
     <link rel="stylesheet" href="supabase-online.css" />
     <link rel="stylesheet" href="economy.css?v=1" />
@@ -38,7 +38,6 @@
             <p class="menu-kicker">CONQUISTE SEU LEGADO</p>
             <h2 id="battle-heading">BATALHA</h2>
             <button class="menu-button menu-button-featured" type="button" data-menu-mode="bot" aria-haspopup="dialog"><span>Contra o BOT</span><small>Enfrente um exército rival</small></button>
-            <button class="menu-button" type="button" data-menu-mode="pvp" aria-haspopup="dialog"><span>Batalha Local</span><small>Dois jogadores · um dispositivo</small></button>
             <button id="training-entry" class="menu-button" type="button"><span>Treinamento</span><small>Aprenda a comandar seu exército</small></button>
             <p class="menu-panel-foot">Sua estratégia. Seu domínio.</p>
           </section>
@@ -84,8 +83,8 @@
           </div>
         </div>
 
-        <div class="selector-grid">
-          <div class="selector-card">
+        <div class="selector-grid bot-options">
+          <div class="selector-card" hidden>
             <label for="game-mode">Modo de jogo</label>
             <select id="game-mode">
               <option value="pvp">JOGADOR vs JOGADOR</option>

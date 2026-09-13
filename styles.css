@@ -2433,7 +2433,7 @@ header.game-header {
 #start-screen .menu-divider::after { transform: rotate(180deg); }
 #start-screen .menu-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 24px; width: 100%; max-width: 1000px; margin: 0 auto; }
 #start-screen .menu-panel {
-  position: relative; min-width: 0; width: 100%; height: 100%; padding: 12px 22px 10px; text-align: center;
+  position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; padding: 12px 22px 10px; text-align: center;
   border: 1px solid #9c7a47; outline: 1px solid #5d4a3266; outline-offset: 4px;
   background: repeating-linear-gradient(120deg, #ffffff02 0 1px, transparent 1px 5px), linear-gradient(135deg, #2d2c28eb, #111619f2 45%, #161617f5);
   box-shadow: inset 0 0 0 4px #0e1215, inset 0 0 0 5px #8c6b3e55, 0 12px 35px #0008;
@@ -2461,7 +2461,7 @@ header.game-header {
 #start-screen button:focus-visible, #start-screen select:focus-visible { outline: 2px solid #ffe2a0; outline-offset: 4px; }
 #start-screen .menu-button:disabled { cursor: not-allowed; color: #b3ada1; border-color: #625643; background: linear-gradient(100deg, #14191b, #242726, #15191b); }
 #start-screen .menu-button:disabled::before, #start-screen .menu-button:disabled::after { color: #736449; }
-#start-screen .menu-panel-foot { margin: 8px 0 0; color: #aaa08e; font-size: 12px; font-style: italic; }
+#start-screen .menu-panel-foot { margin: auto 0 0; padding-top: 8px; color: #aaa08e; font-size: 12px; font-style: italic; }
 #start-screen .menu-realms { text-align: center; margin: 0 auto; padding: 4px 0; width: min(1000px, 100%); }
 #start-screen .menu-motto { font-size: clamp(10px, 1.2vw, 13px); letter-spacing: .22em; color: #d6c19a; margin: 0 0 12px; }
 #start-screen .menu-realm-list { display: flex; justify-content: center; gap: clamp(16px, 3vw, 40px); list-style: none; margin: 0; padding: 0; }
@@ -2481,6 +2481,8 @@ header.game-header {
 #start-screen .menu-preparation h2 { font: 26px Georgia, serif; margin: 12px 0; }
 #start-screen .menu-preparation-copy { font: 14px/1.5 Georgia, serif; color: #c4bba9; }
 #start-screen .selector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+#start-screen .selector-grid.bot-options { grid-template-columns: minmax(0, 1fr); }
+#start-screen .selector-grid.bot-options > [hidden] { display: none; }
 #start-screen .selector-card { padding: 12px; border: 1px solid #6d5d4055; border-radius: 0; background: #10151899; gap: 10px; }
 #start-screen .selector-card::before { display: none; }
 #start-screen .selector-card label { font: 10px Arial, sans-serif; letter-spacing: .08em; color: #d6c19a; }
