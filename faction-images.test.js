@@ -50,10 +50,13 @@ test('all remaining faction images map to their own roles and stay hidden until 
         const [hidden, visible] = w.document.querySelectorAll('#board .piece');
         assert.equal(hidden.textContent.trim(), '?');
         assert.equal(hidden.querySelector('img,svg'), null);
+        assert.equal(hidden.querySelector('.piece-art-viewport'), null);
         assert.equal(hidden.dataset.kind, undefined);
+        assert.equal(hidden.dataset.role, undefined);
         assert.equal(hidden.getAttribute('aria-label'), null);
         assert.equal(hidden.title, '');
         assert.equal(visible.querySelector('img').getAttribute('src'), path);
+        assert.equal(visible.querySelector('.piece-art-viewport > img.piece-art').getAttribute('src'), path);
         assert(visible.classList.contains('faction-portrait'));
         if (role === 'objective' || role === 'trap') {
           assert.equal(visible.textContent.trim(), '');

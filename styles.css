@@ -2233,7 +2233,7 @@ header.game-header {
 #game-screen > .board-shell {
   min-width: 0;
   width: 100% !important;
-  max-width: 600px !important;
+  max-width: 952px !important;
   padding: 6px !important;
   margin: 0 auto !important;
   gap: 6px !important;
@@ -2241,7 +2241,7 @@ header.game-header {
   transform-style: flat;
 }
 #game-screen #board {
-  width: min(100%, 560px, 60svh) !important;
+  width: min(100%, 940px) !important;
   height: auto !important;
   max-height: none !important;
   margin: 0 auto !important;
@@ -2283,15 +2283,15 @@ header.game-header {
 #game-screen .log-entry { padding: 8px; }
 @media (min-width: 1100px) {
   #game-screen {
-    grid-template-columns: minmax(180px, 220px) minmax(0, 600px) minmax(180px, 220px) !important;
-    max-width: 1072px !important;
+    grid-template-columns: minmax(150px, 170px) minmax(0, 1fr) minmax(150px, 170px) !important;
+    max-width: 1600px !important;
   }
+  #game-screen > .board-shell { max-width: none !important; }
   #game-screen #board {
-    /* Reserva espaço para cabeçalho, status e preparação, sem cortar linhas. */
-    width: min(100%, 520px, 56svh, max(340px, calc(100svh - 270px))) !important;
+    width: 100% !important;
   }
   #game-screen > :is(.left-panel, .right-panel) {
-    max-width: 220px !important;
+    max-width: 170px !important;
     max-height: calc(100svh - 110px);
     overflow-y: auto;
   }
@@ -2301,7 +2301,7 @@ header.game-header {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "top" "board" "left" "right";
   }
-  #game-screen > :is(.left-panel, .right-panel) { width: 100%; max-width: 600px; margin: 0 auto; }
+  #game-screen > :is(.left-panel, .right-panel) { width: 100%; max-width: 952px; margin: 0 auto; }
 }
 @media (max-width: 760px) {
   #game-screen > .top-banner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2799,30 +2799,46 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
   z-index: 0;
   pointer-events: none;
 }
-#game-screen .piece.faction-portrait .piece-art {
+#game-screen .piece.faction-portrait .piece-art-viewport {
   position: absolute;
-  inset: 7%;
+  inset: 2.5%;
   z-index: 2;
   display: block;
-  opacity: 1;
-  visibility: visible;
-  width: 86%;
-  height: 86%;
-  object-fit: cover;
-  object-position: center;
+  width: 95%;
+  height: 95%;
+  overflow: hidden;
   border: 1px solid #a4caff;
   border-radius: 50%;
   box-sizing: border-box;
   pointer-events: none;
 }
+#game-screen .piece.faction-portrait .piece-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  visibility: visible;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: center 35%;
+  transform: scale(var(--portrait-zoom, 1));
+  transform-origin: 50% 35%;
+}
+#game-screen .piece.faction-portrait[data-kind="warrior"] { --portrait-zoom: 1.5; }
+#game-screen .piece.faction-portrait[data-faction="orcs"]:is([data-role="rank9"], [data-role="rank10"]) {
+  --portrait-zoom: 1.9;
+}
 #game-screen .piece.faction-portrait .faction-rank-badge {
   position: absolute;
-  right: -3%;
-  bottom: -3%;
+  right: -7%;
+  bottom: -7%;
   z-index: 3;
   display: grid;
   place-items: center;
-  width: 25%;
+  width: clamp(12px, 24%, 18px);
   aspect-ratio: 1;
   box-sizing: border-box;
   margin: 0;
@@ -2831,7 +2847,7 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 25%, #142e51, #050c18 80%);
   color: #fff1cd;
-  font: 700 clamp(5px, .5vw, 8px)/1 Georgia, serif;
+  font: 700 clamp(7px, .6vw, 9px)/1 Georgia, serif;
   letter-spacing: 0;
   text-shadow: 0 1px 1px #000;
   box-shadow: inset 0 1px 1px #fff0c133, 0 1px 3px #0009;
@@ -2848,8 +2864,53 @@ body:has(#game-screen:not(.hidden)):not(:has(#start-screen:not(.hidden))) {
  background: conic-gradient(from -30deg, var(--medal-light), var(--medal-dark) 30%, var(--medal-light) 49%, var(--medal-rim) 54%, var(--medal-dark) 72%, var(--medal-light));
  border-color: var(--medal-light);
 }
-#game-screen .piece.faction-portrait:not([data-faction="romanos"]) .piece-art { border-color: var(--medal-light); }
+#game-screen .piece.faction-portrait:not([data-faction="romanos"]) .piece-art-viewport { border-color: var(--medal-light); }
 #game-screen .piece.faction-portrait:not([data-faction="romanos"]) .faction-rank-badge {
  background: radial-gradient(circle at 35% 25%, var(--medal-dark), #080808 80%);
  border-color: var(--medal-rim);
+}
+
+@media (max-width: 760px) {
+  #game-screen > .board-shell { max-width: 100% !important; }
+  #game-screen #board { width: min(100%, calc(100vw - 32px)) !important; }
+}
+
+/* Desktop e tablet: reservar o cabeçalho, HUD e aba de peças perdidas na altura visível. */
+@media (min-width: 761px) {
+  #game-screen #board {
+    width: min(100%, var(--board-viewport-limit, calc(100dvh - 260px))) !important;
+  }
+  #game-screen:has(#setup-controls:not(.hidden)) #board {
+    width: min(100%, var(--board-viewport-limit, calc(100dvh - 320px))) !important;
+  }
+}
+
+@media (min-width: 1100px) {
+  #game-screen { gap: 5px !important; }
+  #game-screen > .top-banner { padding: 2px 6px; }
+  #game-screen .player-banner { min-height: 42px; padding: 2px 6px; }
+  #game-screen .banner-crest { width: 34px; height: 34px; flex-basis: 34px; }
+  #game-screen .hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+  #game-screen .hud > :first-child { flex: 0 1 auto; min-width: 0; }
+  #game-screen .hud-actions {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+  #game-screen .audio-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+  #game-screen .hud-actions button { padding: 4px 6px; font-size: .76rem; }
+  #game-screen .volume-control input { width: 42px; }
+  #game-screen .lost-pieces-panel { margin-top: 2px; }
+  #game-screen .lost-pieces-panel > summary { padding: 6px 10px; }
 }

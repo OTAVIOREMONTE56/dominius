@@ -347,6 +347,7 @@ function renderBoard() {
 
           if (portraitImage) {
             pieceEl.classList.add('faction-portrait');
+            pieceEl.dataset.role = cell.piece.roleKey;
             if (pieceEl.dataset.faction === 'romanos') pieceEl.classList.add('roman-portrait');
             if (pieceEl.dataset.faction === 'romanos' && cell.piece.roleKey === 'rank10') pieceEl.classList.add('roman-rank10');
             pieceEl.style.removeProperty('--piece-image');
@@ -362,7 +363,10 @@ function renderBoard() {
             artwork.src = cell.piece.image === imagePath ? cell.piece.image : imagePath;
             artwork.alt = cell.piece.name;
             artwork.draggable = false;
-            pieceEl.prepend(artwork);
+            const portraitViewport = document.createElement('span');
+            portraitViewport.className = 'piece-art-viewport';
+            portraitViewport.appendChild(artwork);
+            pieceEl.prepend(portraitViewport);
           } else {
             pieceEl.style.setProperty('--piece-image', cell.piece.image ? `url("${cell.piece.image}")` : 'none');
             pieceEl.innerHTML = `
@@ -508,6 +512,27 @@ function render() {
   renderTransitionScreen();
   renderAudioHud();
   renderEndScreen();
+  fitBoardToViewport();
+}
+
+function fitBoardToViewport() {
+  if (window.innerWidth <= 760 || els.gameScreen.classList.contains('hidden')) {
+    els.gameScreen.style.removeProperty('--board-viewport-limit');
+    return;
+  }
+
+  const boardTop = els.board.getBoundingClientRect().top + window.scrollY;
+  const lostPanel = document.getElementById('lost-pieces-panel');
+  const lostSummaryHeight = lostPanel.querySelector('summary').getBoundingClientRect().height;
+  if (!boardTop || !lostSummaryHeight) return;
+
+  const shellGap = parseFloat(window.getComputedStyle(els.board.parentElement).gap) || 0;
+  const lostMargin = parseFloat(window.getComputedStyle(lostPanel).marginTop) || 0;
+  const screenPadding = parseFloat(window.getComputedStyle(els.gameScreen).paddingBottom) || 0;
+  const bodyPadding = parseFloat(window.getComputedStyle(document.body).paddingBottom) || 0;
+  const available = Math.max(0, Math.floor(window.innerHeight - boardTop
+    - lostSummaryHeight - lostMargin - shellGap - screenPadding - bodyPadding - 4));
+  els.gameScreen.style.setProperty('--board-viewport-limit', `${available}px`);
 }
 
 
@@ -1076,6 +1101,8 @@ els.ambientVolume.addEventListener('input', (event) => {
 els.effectsVolume.addEventListener('input', (event) => {
   audioManager?.setEffectsVolume?.(Number(event.target.value));
 });
+window.addEventListener('resize', fitBoardToViewport);
+document.fonts?.ready?.then(fitBoardToViewport);
 
 initSelectors();
 renderPlayersSummary();
