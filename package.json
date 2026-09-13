@@ -3,16 +3,24 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "app:build": "node scripts/app-build.js",
+    "app:sync": "npm run app:build && cap sync android",
+    "app:android": "cap open android"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@electric-sql/pglite": "^0.3.14",
+    "esbuild": "^0.28.2",
     "jsdom": "^26.1.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
     "@supabase/supabase-js": "^2.57.4"
   }
 }
