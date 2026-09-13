@@ -9,10 +9,10 @@ if (path.dirname(output) !== root || path.basename(output) !== 'app-web') {
 }
 
 const files = [
-  'styles.css', 'account.css', 'supabase-online.css', 'economy.css', 'tutorial.css',
+  'styles.css', 'account.css', 'supabase-online.css', 'economy.css', 'tutorial.css', 'menu.css', 'intro.css',
   'audioManager.js', 'bot.js', 'game-rules.js', 'app.js', 'tutorial.js',
   'supabase-config.js', 'supabase-client.js', 'economy.js', 'account.js',
-  'supabase-online.js', 'vendor/supabase.js', 'vendor/supabase-LICENSE'
+  'supabase-online.js', 'intro.js', 'vendor/supabase.js', 'vendor/supabase-LICENSE'
 ];
 const assetExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp', '.svg', '.mp3', '.wav', '.ogg']);
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="intro-pending">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,28 +9,30 @@
     <link rel="stylesheet" href="supabase-online.css" />
     <link rel="stylesheet" href="economy.css?v=1" />
     <link rel="stylesheet" href="tutorial.css?v=tutorial-1" />
+    <link rel="stylesheet" href="assets/interface/menu.css?v=crest-2" />
+    <link rel="stylesheet" href="intro.css" />
   </head>
   <body>
+    <div id="dominius-intro" class="intro" role="dialog" aria-modal="true" aria-label="Abertura DOMINIUS">
+      <div class="intro-background" aria-hidden="true"></div>
+      <div class="intro-fog" aria-hidden="true"></div>
+      <div class="intro-embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="intro-art" aria-hidden="true">
+        <img src="assets/interface/logo-dominius-transparent.png" alt="" />
+        <div class="intro-glow"></div>
+        <div class="intro-title-sweep"></div>
+      </div>
+      <button id="intro-skip" class="intro-skip" type="button">PULAR INTRO</button>
+    </div>
     <div id="app">
       <section id="start-screen" class="screen menu-screen" aria-label="Menu principal">
         <button id="account-entry" class="account-entry" type="button" data-account-open aria-haspopup="dialog" aria-controls="account-dialog">CONTA / ENTRAR</button>
-        <!-- Cenário CSS. Imagem futura: assets/interface/menu-background.png (ver --menu-scenery). -->
         <div class="menu-scene" aria-hidden="true">
-          <div class="menu-mountains"></div>
-          <div class="menu-fortress">
-            <i class="menu-tower tower-1"></i><i class="menu-tower tower-2"></i>
-            <i class="menu-tower tower-3"></i><i class="menu-tower tower-4"></i>
-            <div class="menu-wall"></div><div class="menu-gate"></div>
-            <i class="menu-standard standard-1"></i><i class="menu-standard standard-2"></i>
-          </div>
           <div class="menu-fire"></div><div class="menu-mist"></div>
           <div class="menu-embers"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <header class="menu-brand">
-          <div class="menu-crown" aria-hidden="true">♜</div>
-          <h1>DOMINIUS</h1>
-          <p class="menu-subtitle">A GUERRA DOS REINOS</p>
-          <div class="menu-divider" aria-hidden="true">◆</div>
+          <img class="menu-official-crest" src="assets/interface/logo-dominius-transparent.png" alt="DOMINIUS — A GUERRA DOS REINOS" />
         </header>
         <div class="menu-columns">
           <section class="menu-panel" aria-labelledby="battle-heading">
@@ -47,6 +49,7 @@
             <h2 id="multiplayer-heading">MULTIPLAYER</h2>
             <button id="online-entry" class="menu-button menu-button-featured" type="button" aria-haspopup="dialog" aria-controls="online-lobby"><span>BATALHA ONLINE</span><small>Crie uma sala e convide seu adversário</small></button>
             <button id="account-register-entry" class="menu-button" type="button" data-account-register aria-haspopup="dialog" aria-controls="account-dialog"><span>CRIAR CONTA</span><small>Crie seu comandante e prepare-se para batalhas online</small></button>
+            <button class="menu-button" type="button" data-account-open aria-haspopup="dialog" aria-controls="account-dialog"><span>MEU PERFIL</span><small>Gerencie sua conta online</small></button>
             <p class="menu-panel-foot">Dois comandantes. Uma batalha entre reinos.</p>
           </section>
         </div>
@@ -259,5 +262,6 @@
     <script src="economy.js?v=2"></script>
     <script src="account.js?v=coronas-1"></script>
     <script src="supabase-online.js?v=coronas-4"></script>
+    <script src="intro.js"></script>
   </body>
 </html>

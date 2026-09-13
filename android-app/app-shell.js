@@ -3,6 +3,11 @@ import { Capacitor } from '@capacitor/core';
 
 if (Capacitor.isNativePlatform()) {
   App.addListener('backButton', () => {
+    const intro = document.getElementById('dominius-intro');
+    if (intro && !intro.hidden) {
+      if (intro.classList.contains('playing')) window.DominiusIntro?.skipDominiusIntro();
+      return;
+    }
     const dialog = document.querySelector('dialog[open]');
     if (dialog) {
       dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
