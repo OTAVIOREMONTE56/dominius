@@ -329,25 +329,40 @@ end $$;
 alter table public.matches add column if not exists wager_amount integer not null default 0;
 alter table public.matches add column if not exists pot_amount integer not null default 0;
 alter table public.matches add column if not exists wager_status text not null default 'none';
+alter table public.matches drop constraint if exists dominius_wager_amount_check;
 do $$ begin
-  if not exists(select 1 from pg_constraint where conrelid='public.matches'::regclass and conname='dominius_wager_amount_check') then
-    alter table public.matches add constraint dominius_wager_amount_check
-      check (wager_amount in (0,50,100,250,500) and
-        ((wager_amount=0 and pot_amount=0 and wager_status='none') or
-         (wager_amount>0 and ((wager_status='pending' and pot_amount=0) or
-          (wager_status in ('locked','settled','refunded') and pot_amount=wager_amount*2)))));
+  if exists(select 1 from public.matches where wager_amount in (250,500) and phase in ('setup','battle')) then
+    raise exception 'Existem partidas abertas com apostas antigas. Encerre-as antes de aplicar a migração.';
+  end if;
+  if exists(select 1 from public.matches m where m.phase='setup' and m.wager_status='pending' and m.wager_amount>0
+    and (select count(*) from public.room_players where room_id=m.room_id)=2) then
+    raise exception 'Existem desafios apostados antigos já aceitos. Encerre-os antes de aplicar a migração.';
   end if;
   if not exists(select 1 from pg_constraint where conrelid='public.matches'::regclass and conname='dominius_wager_status_check') then
     alter table public.matches add constraint dominius_wager_status_check
       check (wager_status in ('none','pending','locked','settled','refunded'));
   end if;
 end $$;
+alter table public.matches add constraint dominius_wager_amount_check
+  check ((wager_amount in (0,5,10,20,50,100) or
+          (wager_amount in (250,500) and phase in ('finished','closed'))) and
+    ((wager_amount=0 and pot_amount=0 and wager_status='none') or
+     (wager_amount>0 and ((wager_status='pending' and pot_amount=0) or
+      (wager_status in ('locked','settled','refunded') and pot_amount=wager_amount*2)))));
 create table if not exists public.wallets (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  balance bigint not null default 500 check(balance>=0),
+  balance bigint not null default 100 check(balance>=0),
+  gem_balance bigint not null default 0 check(gem_balance>=0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.wallets add column if not exists gem_balance bigint not null default 0;
+alter table public.wallets alter column balance set default 100;
+do $$ begin
+  if not exists(select 1 from pg_constraint where conrelid='public.wallets'::regclass and conname='dominius_gem_balance_nonnegative') then
+    alter table public.wallets add constraint dominius_gem_balance_nonnegative check(gem_balance>=0);
+  end if;
+end $$;
 create table if not exists public.coin_transactions (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -364,21 +379,39 @@ create index if not exists coin_transaction_recent on public.coin_transactions(u
 create or replace function dominius_private.new_wallet() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  insert into public.wallets(user_id) values(new.id) on conflict do nothing;
+  insert into public.wallets(user_id,balance,gem_balance) values(new.id,100,0) on conflict do nothing;
   insert into public.coin_transactions(user_id,amount,type,balance_after)
-    values(new.id,500,'initial_balance',500) on conflict do nothing;
+    values(new.id,100,'initial_balance',100) on conflict do nothing;
   return new;
 end $$;
 drop trigger if exists dominius_new_wallet on auth.users;
 create trigger dominius_new_wallet after insert on auth.users for each row execute function dominius_private.new_wallet();
-insert into public.wallets(user_id) select id from auth.users on conflict do nothing;
-insert into public.coin_transactions(user_id,amount,type,balance_after)
-  select user_id,500,'initial_balance',500 from public.wallets on conflict do nothing;
+-- Contas anteriores à instalação não recebem bônus retroativo ao entrar.
+insert into public.wallets(user_id,balance,gem_balance)
+  select id,0,0 from auth.users on conflict do nothing;
+
+-- Toda entrada em sala apostada passa por este gatilho, inclusive chamadas RPC diretas.
+create or replace function dominius_private.check_wager_join() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare wager integer; available bigint;
+begin
+  if new.seat=1 then
+    select wager_amount into wager from public.matches where room_id=new.room_id;
+    if wager>0 then
+      select balance into available from public.wallets where user_id=new.user_id;
+      if available is null or available<wager then raise exception 'Saldo de Coroas insuficiente.'; end if;
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists dominius_check_wager_join on public.room_players;
+create trigger dominius_check_wager_join before insert on public.room_players
+  for each row execute function dominius_private.check_wager_join();
 
 -- Somente funções privadas alteram saldo; a linha é bloqueada pelo UPDATE.
 create or replace function dominius_private.change_coins(p_user uuid,p_amount bigint,p_type text,p_match uuid,p_metadata jsonb default '{}'::jsonb) returns bigint
 language plpgsql security definer set search_path = '' as $$
-declare result bigint;
+declare result bigint; context jsonb;
 begin
   -- Serializa por carteira antes de consultar a chave idempotente.
   select balance into result from public.wallets where user_id=p_user for update;
@@ -389,28 +422,31 @@ begin
   update public.wallets set balance=balance+p_amount,updated_at=now()
     where user_id=p_user and balance+p_amount>=0 returning balance into result;
   if not found then raise exception 'Saldo de Coroas insuficiente.'; end if;
+  if p_match is not null then
+    select jsonb_build_object('room_code',r.code,'opponent',coalesce(p.display_name,'Comandante')) into context
+      from public.matches m join public.rooms r on r.id=m.room_id
+      left join public.room_players rival on rival.room_id=r.id and rival.user_id<>p_user
+      left join public.profiles p on p.id=rival.user_id where m.id=p_match limit 1;
+  end if;
   insert into public.coin_transactions(user_id,amount,type,match_id,balance_after,metadata)
-    values(p_user,p_amount,p_type,p_match,result,p_metadata);
+    values(p_user,p_amount,p_type,p_match,result,coalesce(p_metadata,'{}'::jsonb)||coalesce(context,'{}'::jsonb));
   return result;
 end $$;
 
 -- O gatilho roda dentro da mesma transação de confirmar exército, capturar objetivo ou abandonar.
 create or replace function dominius_private.match_economy() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare participants uuid[]; winner_id uuid; wager integer;
+declare participants uuid[]; winner_id uuid;
 begin
   if old.phase='setup' and new.phase='battle' and new.wager_amount>0 then
-    select array_agg(user_id order by user_id) into participants from public.room_players where room_id=new.room_id;
-    if cardinality(participants)<>2 or participants[1]=participants[2] then raise exception 'São necessárias duas contas diferentes.'; end if;
-    wager:=new.wager_amount;
-    perform dominius_private.change_coins(participants[1],-wager,'wager_lock',new.id);
-    perform dominius_private.change_coins(participants[2],-wager,'wager_lock',new.id);
-    new.pot_amount:=wager*2;new.wager_status:='locked';
+    if old.wager_status<>'locked' or old.pot_amount<>old.wager_amount*2 then
+      raise exception 'Os dois jogadores precisam aceitar a aposta antes da batalha.';
+    end if;
   end if;
-  if old.phase='battle' and new.phase='finished' then
+  if (old.phase='battle' and new.phase='finished') or (old.wager_status='locked' and new.phase='closed') then
     select array_agg(user_id order by user_id) into participants from public.room_players where room_id=new.room_id;
     if cardinality(participants)<>2 or participants[1]=participants[2] then raise exception 'Partida inválida para Coroas.'; end if;
-    if new.winner is not null then
+    if new.phase='finished' and new.winner is not null then
       select user_id into winner_id from public.room_players where room_id=new.room_id and seat=new.winner;
       if winner_id is null then raise exception 'Vencedor inválido.'; end if;
     end if;
@@ -438,7 +474,7 @@ create or replace function public.dominius_create_wager_room(p_faction text,p_wa
 language plpgsql security definer set search_path = '' as $$
 declare r uuid;
 begin
-  if p_wager is null or p_wager not in (50,100,250,500) then raise exception 'Aposta inválida.'; end if;
+  if p_wager is null or p_wager not in (5,10,20,50,100) then raise exception 'Aposta inválida.'; end if;
   if not exists(select 1 from public.wallets where user_id=auth.uid() and balance>=p_wager) then
     raise exception 'Saldo de Coroas insuficiente.';
   end if;
@@ -446,6 +482,55 @@ begin
   update public.matches set wager_amount=p_wager,wager_status='pending' where room_id=r;
   return r;
 end $$;
+
+-- A RPC comum entra apenas em salas livres. Aceitar aposta exige valor esperado e
+-- trava as duas carteiras antes de admitir o segundo jogador, numa transação só.
+create or replace function dominius_private.join_room_core(p_code text,p_faction text,p_expected_wager integer) returns uuid
+language plpgsql security definer set search_path = '' as $$
+declare r public.rooms; m public.matches; uid uuid:=auth.uid(); n integer; participants uuid[];
+begin
+  if uid is null then raise exception 'Entre na sua conta.'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(uid::text,2));
+  insert into dominius_private.join_limits(user_id) values(uid) on conflict do nothing;
+  update dominius_private.join_limits set
+    attempts=case when window_start<now()-interval '1 minute' then 1 else attempts+1 end,
+    window_start=case when window_start<now()-interval '1 minute' then now() else window_start end
+    where user_id=uid returning attempts into n;
+  if n>12 then return null; end if;
+  select * into r from public.rooms where code=upper(btrim(p_code));
+  if not found then return null; end if;
+  select * into m from public.matches where room_id=r.id for update;
+  select * into r from public.rooms where id=r.id for update;
+  if exists(select 1 from public.room_players where room_id=r.id and user_id=uid) then return r.id; end if;
+  if r.status<>'waiting' or m.phase<>'setup' or (select count(*) from public.room_players where room_id=r.id)<>1 then
+    raise exception 'Esta sala não está disponível.';
+  end if;
+  if p_expected_wager is null then
+    if m.wager_amount<>0 then raise exception 'Aceite a aposta antes de entrar na sala.'; end if;
+  elsif p_expected_wager not in (5,10,20,50,100) or m.wager_amount<>p_expected_wager or m.wager_status<>'pending' then
+    raise exception 'A aposta mudou ou não está disponível.';
+  end if;
+  insert into public.room_players(room_id,user_id,seat,faction) values(r.id,uid,1,p_faction);
+  if p_expected_wager is not null then
+    select array_agg(user_id order by user_id) into participants from public.room_players where room_id=r.id;
+    if cardinality(participants)<>2 or participants[1]=participants[2] then raise exception 'São necessárias duas contas diferentes.'; end if;
+    perform dominius_private.change_coins(participants[1],-m.wager_amount,'wager_lock',m.id);
+    perform dominius_private.change_coins(participants[2],-m.wager_amount,'wager_lock',m.id);
+    update public.matches set wager_status='locked',pot_amount=m.wager_amount*2,version=version+1 where id=m.id;
+  else
+    update public.matches set version=version+1 where id=m.id;
+  end if;
+  update public.rooms set status='preparing' where id=r.id;
+  return r.id;
+end $$;
+create or replace function public.dominius_join_room(p_code text,p_faction text) returns uuid
+language sql security definer set search_path = '' as $$
+  select dominius_private.join_room_core(p_code,p_faction,null)
+$$;
+create or replace function public.dominius_accept_wager(p_code text,p_faction text,p_wager integer) returns uuid
+language sql security definer set search_path = '' as $$
+  select dominius_private.join_room_core(p_code,p_faction,p_wager)
+$$;
 
 -- Consulta limitada pelo mesmo contador de tentativas do código da sala.
 create or replace function public.dominius_wager_offer(p_code text) returns jsonb
@@ -460,8 +545,10 @@ begin
     window_start=case when window_start<now()-interval '1 minute' then now() else window_start end
     where user_id=auth.uid() returning attempts into n;
   if n>12 then return null; end if;
-  select jsonb_build_object('wager_amount',m.wager_amount,'pot_amount',m.wager_amount*2)
+  select jsonb_build_object('wager_amount',m.wager_amount,'pot_amount',m.wager_amount*2,
+    'opponent',coalesce(p.display_name,'Comandante'))
     into offer from public.rooms r join public.matches m on m.room_id=r.id
+    left join public.profiles p on p.id=r.host_id
     where r.code=upper(btrim(p_code)) and r.status='waiting';
   return offer;
 end $$;
@@ -478,9 +565,9 @@ drop policy if exists dominius_wallet_self on public.wallets;
 create policy dominius_wallet_self on public.wallets for select to authenticated using(user_id=(select auth.uid()));
 drop policy if exists dominius_coin_history_self on public.coin_transactions;
 create policy dominius_coin_history_self on public.coin_transactions for select to authenticated using(user_id=(select auth.uid()));
-revoke all on function dominius_private.new_wallet(),dominius_private.change_coins(uuid,bigint,text,uuid,jsonb),dominius_private.match_economy() from public,anon,authenticated;
-revoke all on function public.dominius_create_wager_room(text,integer),public.dominius_wager_offer(text) from public,anon,authenticated;
-grant execute on function public.dominius_create_wager_room(text,integer),public.dominius_wager_offer(text) to authenticated;
+revoke all on function dominius_private.new_wallet(),dominius_private.check_wager_join(),dominius_private.change_coins(uuid,bigint,text,uuid,jsonb),dominius_private.match_economy(),dominius_private.join_room_core(text,text,integer) from public,anon,authenticated;
+revoke all on function public.dominius_create_wager_room(text,integer),public.dominius_wager_offer(text),public.dominius_join_room(text,text),public.dominius_accept_wager(text,text,integer) from public,anon,authenticated;
+grant execute on function public.dominius_create_wager_room(text,integer),public.dominius_wager_offer(text),public.dominius_join_room(text,text),public.dominius_accept_wager(text,text,integer) to authenticated;
 
 -- Abandono oficial após o início: somente o desafio apostado paga o pote ao adversário.
 create or replace function public.dominius_leave(p_room uuid) returns void

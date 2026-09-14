@@ -11,14 +11,14 @@
         <label><input type="radio" name="online-mode" value="free" checked> Batalha livre</label>
         <h3>BATALHA VALENDO COROAS</h3><p>Coloque suas Coroas em jogo.</p>
         <label><input type="radio" name="online-mode" value="wager"> Valendo Coroas</label>
-        <div id="online-wager-options" hidden><p>ESCOLHA O VALOR</p><div class="wager-options">
-          ${[50,100,250,500].map((amount,i)=>`<label><input type="radio" name="wager-amount" value="${amount}" ${i===0?'checked':''}><span>${amount}</span></label>`).join('')}
-        </div></div></div>
+        <div id="online-wager-options" hidden><p>APOSTA DA BATALHA</p><div class="wager-options">
+          ${[5,10,20,50,100].map((amount,i)=>`<label><input type="radio" name="wager-amount" value="${amount}" ${i===0?'checked':''}><span>♛ ${amount}</span><small hidden>Saldo insuficiente</small></label>`).join('')}
+        </div><p id="online-wager-terms" aria-live="polite"></p></div></div>
       <button type="button" class="primary-btn" id="online-create">Criar Batalha</button>
       <form id="online-join-form"><label for="online-code">Código da Sala</label><input id="online-code" maxlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off" placeholder="Ex.: A12B3C">
       <button type="submit" class="secondary-btn">Entrar em Sala</button></form></div>
-    <div id="online-wager-challenge" class="online-economy" hidden><h3>DESAFIO VALENDO COROAS</h3><p id="online-challenge-terms"></p><p class="coin-balance"><span aria-hidden="true">♛</span> SEU SALDO <strong data-coin-balance>—</strong></p>
-      <button type="button" class="primary-btn" id="online-accept-wager">Aceitar desafio</button><button type="button" class="secondary-btn" id="online-cancel-wager">Cancelar</button></div>
+    <div id="online-wager-challenge" class="online-economy" hidden><h3>DESAFIO RECEBIDO</h3><p id="online-challenge-terms"></p><p class="coin-balance"><span aria-hidden="true">♛</span> SEU SALDO <strong data-coin-balance>—</strong></p><p id="online-challenge-warning" role="status"></p>
+      <button type="button" class="primary-btn" id="online-accept-wager">ACEITAR DESAFIO</button><button type="button" class="secondary-btn" id="online-cancel-wager">RECUSAR</button></div>
     <div id="online-room-info" hidden><p id="online-room-code"></p><p id="online-room-wager"></p><p class="coin-balance"><span aria-hidden="true">♛</span> SEU SALDO <strong data-coin-balance>—</strong></p><ul id="online-players"></ul>
       <button id="online-prepare" type="button" class="primary-btn">Preparar exército</button></div>
     <button id="online-account" type="button" class="secondary-btn">Conta / Entrar</button>
@@ -29,9 +29,12 @@
   const economy=window.DominiusEconomy||{wallet:async()=>null,balance:null,format:String};
   let pendingOffer=null;
   function updateWagerChoices(balance){
-    q('online-wager-options').querySelectorAll('input').forEach(option=>{option.disabled=balance===null||Number(option.value)>balance;});
-    if(q('online-wager-options input:checked')?.disabled)q('online-wager-options input:not(:disabled)')?.click();
+    const options=q('online-wager-options');
+    options.querySelectorAll('input').forEach(option=>{option.disabled=balance===null||Number(option.value)>balance;option.closest('label').querySelector('small').hidden=!option.disabled;});
+    if(options.querySelector('input:checked')?.disabled)options.querySelector('input:not(:disabled)')?.click();
     q('online-create').disabled=!!(dialog.querySelector('input[name="online-mode"][value="wager"]:checked') && !q('online-wager-options').querySelector('input:checked:not(:disabled)'));
+    const amount=Number(options.querySelector('input:checked:not(:disabled)')?.value||0);
+    q('online-wager-terms').textContent=amount?`APOSTA: ${amount} COROAS · POTE: ${amount*2} COROAS`:'Saldo insuficiente para apostar.';
   }
   Object.entries(FACTIONS).forEach(([key,f])=>faction.add(new Option(f.label,key)));
   const toolbar=document.createElement('div');toolbar.id='online-toolbar';toolbar.hidden=true;
@@ -138,7 +141,7 @@
     actions.hidden=true;q('online-room-info').hidden=false;q('online-account').hidden=true;
     q('online-room-code').textContent=`Código da sala: ${s.room.code}`;
     q('online-room-wager').textContent=s.match.wager_amount>0
-      ?`BATALHA VALENDO COROAS · Aposta por jogador: ${s.match.wager_amount} · Pote total: ${s.match.wager_amount*2} COROAS`
+      ?`APOSTA: ${s.match.wager_amount} COROAS · POTE: ${s.match.pot_amount||s.match.wager_amount*2} COROAS · ${s.match.wager_status==='locked'?'APOSTA CONFIRMADA':'AGUARDANDO ADVERSÁRIO'}`
       :'BATALHA LIVRE · Vitória: +50 COROAS';
     q('online-players').replaceChildren();
     for(const player of s.players) {
@@ -166,12 +169,12 @@
       if(!last || last.match.id!==s.match.id)return;
       const wager=s.match.wager_amount||0;
       if(s.match.winner===seat)result.textContent=wager
-        ?`POTE CONQUISTADO +${wager*2} COROAS · SALDO ${economy.format(official)} COROAS`
-        :`RECOMPENSA +50 COROAS · SALDO ${economy.format(official)} COROAS`;
+        ?`VITÓRIA\nPOTE CONQUISTADO\n+${wager*2} COROAS\nNOVO SALDO\n${economy.format(official)} COROAS`
+        :`VITÓRIA\nRECOMPENSA\n+50 COROAS\nNOVO SALDO\n${economy.format(official)} COROAS`;
       else if(s.match.winner===null)result.textContent=wager
-        ?`EMPATE · APOSTA DEVOLVIDA ${wager} COROAS · SALDO ${economy.format(official)} COROAS`
+        ?`EMPATE\n${wager} COROAS DEVOLVIDAS\nSALDO\n${economy.format(official)} COROAS`
         :'EMPATE · Nenhuma Coroa conquistada.';
-      else result.textContent=wager?`APOSTA PERDIDA -${wager} COROAS · SALDO ${economy.format(official)} COROAS`:'Nenhuma Coroa conquistada.';
+      else result.textContent=wager?`DERROTA\nAPOSTA PERDIDA\n-${wager} COROAS\nSALDO\n${economy.format(official)} COROAS`:'Nenhuma Coroa conquistada.';
     }catch(error){result.textContent=`Coroas indisponíveis: ${error.message}`;}
   }
   async function refresh() {
@@ -291,11 +294,12 @@
   }
   async function enter(create) {
     const session=await cloud.session();if(!session)throw new Error('Entre na sua conta primeiro.');user=session.user;
-    let procedure=create?'dominius_create_room':'dominius_join_room';
+    let procedure=create?'dominius_create_room':pendingOffer?.wager_amount>0?'dominius_accept_wager':'dominius_join_room';
     let args=create?{p_faction:faction.value}:{p_code:q('online-code').value.trim(),p_faction:faction.value};
+    if(!create&&pendingOffer?.wager_amount>0)args.p_wager=pendingOffer.wager_amount;
     if(create && dialog.querySelector('input[name="online-mode"][value="wager"]:checked')){
       const amount=Number(dialog.querySelector('input[name="wager-amount"]:checked')?.value);
-      if(![50,100,250,500].includes(amount)||amount>await economy.wallet())throw new Error('Saldo de Coroas insuficiente.');
+      if(![5,10,20,50,100].includes(amount)||amount>await economy.wallet())throw new Error('Saldo de Coroas insuficiente.');
       procedure='dominius_create_wager_room';args={p_faction:faction.value,p_wager:amount};
     }
     const id=await cloud.rpc(procedure,args);
@@ -307,20 +311,23 @@
     q('online-wager-options').hidden=option.value!=='wager' || !option.checked;
     updateWagerChoices(economy.balance);
   }));
+  q('online-wager-options').addEventListener('change',()=>updateWagerChoices(economy.balance));
   q('online-join-form').addEventListener('submit',e=>{e.preventDefault();run(async()=>{
     const session=await cloud.session();if(!session)throw new Error('Entre ou crie sua conta primeiro.');
     const offer=await cloud.rpc('dominius_wager_offer',{p_code:q('online-code').value.trim()});
     // A prévia só existe enquanto a sala aguarda um rival. Membros já admitidos podem reconectar.
     if(!offer){await enter(false);return;}
     if(offer.wager_amount>0){pendingOffer=offer;const balance=await economy.wallet();
-      q('online-challenge-terms').textContent=`Aposta: ${offer.wager_amount} Coroas · Seu saldo: ${economy.format(balance)} Coroas · Pote: ${offer.pot_amount} Coroas`;
+      q('online-challenge-terms').textContent=`Adversário: ${offer.opponent||'Comandante'} · Aposta: ${offer.wager_amount} Coroas · Seu saldo: ${economy.format(balance)} Coroas · Pote: ${offer.pot_amount} Coroas`;
       q('online-accept-wager').disabled=balance<offer.wager_amount;
+      q('online-challenge-warning').textContent=balance<offer.wager_amount?'Saldo insuficiente para aceitar este desafio.':'';
       q('online-wager-challenge').hidden=false;actions.hidden=true;
     }else await enter(false);
   });});
   q('online-accept-wager').addEventListener('click',()=>run(async()=>{
     if(!pendingOffer || await economy.wallet()<pendingOffer.wager_amount)throw new Error('Saldo de Coroas insuficiente.');
     await enter(false);pendingOffer=null;q('online-wager-challenge').hidden=true;
+    await economy.wallet();
   }));
   q('online-cancel-wager').addEventListener('click',()=>{pendingOffer=null;q('online-wager-challenge').hidden=true;actions.hidden=false;});
   q('online-account').addEventListener('click',()=>{dialog.close();window.DominiusAccount.open();});

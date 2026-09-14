@@ -18,10 +18,12 @@
       const profileUser=current.user.id;
       window.DominiusEconomy?.wallet().then(() => window.DominiusEconomy.history()).then(rows => {
         if(current?.user.id!==profileUser || !view.querySelector('#account-coin-history'))return;
-        const names={initial_balance:'Saldo inicial',online_win_reward:'Vitória online',wager_lock:'Entrada em batalha',wager_win:'Pote conquistado',wager_refund:'Reembolso de empate',admin_adjustment:'Ajuste'};
+        const names={initial_balance:'Saldo inicial',online_win_reward:'Vitória online',wager_lock:'Aposta da batalha',wager_win:'Vitória em batalha',wager_refund:'Reembolso de batalha',admin_adjustment:'Ajuste'};
         const list=view.querySelector('#account-coin-history');list.replaceChildren();
         for(const row of rows){const li=document.createElement('li'),description=document.createElement('span'),date=document.createElement('time');
-          description.textContent=`${row.amount>0?'+':''}${window.DominiusEconomy.format(row.amount)} · ${names[row.type]||row.type}`;
+          const reference=row.metadata?.room_code?` · Sala ${row.metadata.room_code}`:row.match_id?` · Partida ${row.match_id.slice(0,8)}`:'';
+          const opponent=row.metadata?.opponent?` · ${row.metadata.opponent}`:'';
+          description.textContent=`${row.amount>0?'+':''}${window.DominiusEconomy.format(row.amount)} · ${names[row.type]||row.type}${reference}${opponent}`;
           date.dateTime=row.created_at;date.textContent=new Date(row.created_at).toLocaleString('pt-BR');li.append(description,date);list.append(li);}
       }).catch(error=>message(error.message));
       return;

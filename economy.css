@@ -2,6 +2,7 @@
 .coin-balance[hidden] { display: none; }
 .coin-balance strong { color: #fff0c8; font-variant-numeric: tabular-nums; }
 .coin-balance > span { display: inline-grid; place-items: center; width: 23px; height: 23px; border: 1px solid #d5b879; border-radius: 50%; background: linear-gradient(145deg,#796035,#2e281b); color: #ffe1a0; font-size: 15px; }
+.coin-balance > .gem-icon { margin-left: 8px; border-color: #7299b3; background: linear-gradient(145deg,#326078,#182d41); font-size: 13px; }
 #coin-balance-badge { position: absolute; z-index: 6; top: 12px; left: 12px; padding: 5px 9px; border: 1px solid #b4945d88; border-radius: 6px; background: #111713d9; }
 .coin-gain { animation: coin-gain 1.3s ease-out; }
 @keyframes coin-gain { 25% { filter: drop-shadow(0 0 7px #f8d46a); } 100% { filter: none; } }
@@ -14,10 +15,16 @@
 .wager-options span { display: inline-block; padding: 8px 12px; border: 1px solid #ad8d54; border-radius: 5px; cursor: pointer; }
 .wager-options input:checked + span { background: #8a692e; color: #fff1c3; }
 .wager-options input:disabled + span { opacity: .4; cursor: not-allowed; }
+.wager-options label small { display: block; color: #d8a894; font-size: 10px; margin-top: 3px; }
+.wager-options label small[hidden] { display: none; }
 .online-economy { padding: 10px; border: 1px solid #a88d5477; border-radius: 6px; background: #171a18b8; }
 .online-economy h3 { margin: 4px 0; font: 600 15px var(--font-title); color: #e6c58b; }
 .online-economy p { margin: 5px 0; }
 .online-economy [hidden] { display: none !important; }
-.end-coin-result { margin-top: 8px; color: #ead094; font: 600 13px var(--font-title); }
+.end-coin-result { margin-top: 8px; color: #ead094; font: 600 13px/1.5 var(--font-title); white-space: pre-line; }
 @media (max-width: 760px) { #coin-balance-badge { top: 5px; left: 5px; font-size: 10px; } .wager-options span { padding: 6px 9px; } }
+@media (max-width: 700px) {
+  #coin-balance-badge:not([hidden]) { display: grid; grid-template-columns: 23px auto auto; gap: 2px 5px; top: 13px; left: 14px; padding: 3px 6px; }
+  #coin-balance-badge .gem-icon { margin-left: 0; }
+}
 @media (prefers-reduced-motion: reduce) { .coin-gain { animation: none; } }
