@@ -6,7 +6,7 @@ const { JSDOM } = require('jsdom');
 
 const factions = ['orcs', 'elfos', 'anoes', 'egipcios'];
 const roles = ['objective', 'trap', ...Array.from({ length: 10 }, (_, i) => `rank${i + 1}`)];
-const fileFor = role => role === 'objective' ? 'objetivo.png' : role === 'trap' ? 'armadilha.png' : `rank-${role.slice(4)}.png`;
+const fileFor = role => role === 'objective' ? 'optimized/objetivo.webp' : role === 'trap' ? 'optimized/armadilha.webp' : `optimized/rank-${role.slice(4)}.webp`;
 
 test('all remaining faction images map to their own roles and stay hidden until visible', t => {
   const dom = new JSDOM(fs.readFileSync('index.html', 'utf8'), { runScripts: 'outside-only' });
@@ -30,9 +30,16 @@ test('all remaining faction images map to their own roles and stay hidden until 
       const file = fileFor(role);
       const path = `assets/${faction}/${file}`;
       assert.equal(w.eval(`FACTIONS.${faction}.images.${role}`), file);
-      const png = fs.readFileSync(path);
+      const source = path.replace('optimized/', '').replace('.webp', '.png');
+      const png = fs.readFileSync(source);
       assert.equal(png.subarray(1, 4).toString(), 'PNG', path);
       assert.equal(png.readUInt32BE(16), png.readUInt32BE(20), path);
+      const webp = fs.readFileSync(path);
+      assert.equal(webp.toString('ascii', 0, 4), 'RIFF', path);
+      assert.equal(webp.toString('ascii', 8, 12), 'WEBP', path);
+      assert.equal(webp.readUInt16LE(26) & 16383, 512, path);
+      assert.equal(webp.readUInt16LE(28) & 16383, 512, path);
+      assert(webp.length < png.length, path);
 
       for (const mode of ['pvp', 'bot', 'online']) {
         const viewer = mode === 'online' ? 1 : 0;

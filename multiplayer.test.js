@@ -87,6 +87,9 @@ test('HTTP serves the game, handles room API and protects project files',async()
   const base=`http://127.0.0.1:${server.address().port}`;
   try {
     for(const file of ['/','/game-rules.js','/multiplayer.js','/multiplayer.css','/tutorial.js','/tutorial.css']) assert.equal((await fetch(base+file)).status,200);
+    const portrait=await fetch(base+'/assets/romanos/optimized/cesar.webp');
+    assert.equal(portrait.status,200);
+    assert.equal(portrait.headers.get('content-type'),'image/webp');
     for(const file of ['/server.js','/.git/config','/package.json']) assert.equal((await fetch(base+file)).status,404);
     const response=await fetch(base+'/api/multiplayer',{method:'POST',body:JSON.stringify({action:'create',faction:'elfos'})});
     assert.equal(response.status,200);assert.equal((await response.json()).seat,0);

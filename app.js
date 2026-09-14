@@ -332,6 +332,12 @@ function medalIcon(piece) {
 
 function renderBoard() {
   if (visualMotion.freeze) return;
+  const reusableArtwork = new Map();
+  els.board.querySelectorAll('img.piece-art').forEach(image => {
+    const path = image.getAttribute('src');
+    if (!reusableArtwork.has(path)) reusableArtwork.set(path, []);
+    reusableArtwork.get(path).push(image);
+  });
   els.board.innerHTML = '';
 
   if (!state.board || state.board.length === 0) {
@@ -407,10 +413,11 @@ function renderBoard() {
               </span>
             `;
             // Elemento real, criado somente depois da verificação de visibilidade.
-            const artwork = document.createElement('img');
-            artwork.className = 'piece-art';
             const imagePath = `assets/${pieceEl.dataset.faction}/${portraitImage}`;
-            artwork.src = cell.piece.image === imagePath ? cell.piece.image : imagePath;
+            const artwork = reusableArtwork.get(imagePath)?.pop() || document.createElement('img');
+            artwork.className = 'piece-art';
+            if (artwork.getAttribute('src') !== imagePath) artwork.src = imagePath;
+            artwork.decoding = 'async';
             artwork.alt = cell.piece.name;
             artwork.draggable = false;
             const portraitViewport = document.createElement('span');
@@ -462,7 +469,7 @@ function renderPieceInfo() {
   const piecePreviewMarkup = previewImage
     ? `
         <div class="piece-preview">
-          <img src="${previewImage}" alt="${state.selectedPiece.name}" />
+          <img src="${previewImage}" alt="${state.selectedPiece.name}" decoding="async" />
         </div>
       `
     : '';
@@ -689,7 +696,7 @@ async function playEnemyRevealAnimation(piece, cell, epoch, confirmedCombat = fa
   if (!await motionPause(300, epoch)) return false;
   overlay.innerHTML = '';
   const image = document.createElement('img');
-  image.src = FACTIONS[overlay.dataset.faction].images[piece.roleKey];
+  image.src = `assets/${overlay.dataset.faction}/${FACTIONS[overlay.dataset.faction].images[piece.roleKey]}`;
   image.alt = '';
   overlay.appendChild(image);
   if (!piece.isTrap && !piece.isObjective) {
@@ -753,7 +760,7 @@ async function animateLostPiece(piece, origin, epoch) {
   const to = destination.getBoundingClientRect();
   const image = document.createElement('img');
   image.className = 'motion-lost-portrait';
-  image.src = FACTIONS[piece.factionKey].images[piece.roleKey];
+  image.src = `assets/${piece.factionKey}/${FACTIONS[piece.factionKey].images[piece.roleKey]}`;
   image.alt = '';
   image.style.cssText = `left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px;--lost-x:${to.left + to.width / 2 - from.left - from.width / 2}px;--lost-y:${to.top + to.height / 2 - from.top - from.height / 2}px`;
   motionOverlay(image);

@@ -13,8 +13,8 @@ test('Roman portraits map every role, preserve Caesar and never expose hidden id
   for (const file of ['bot.js', 'game-rules.js', 'app.js']) {
     vm.runInContext(fs.readFileSync(file, 'utf8'), dom.getInternalVMContext());
   }
-  const roles = { objective: 'objetivo.png', trap: 'armadilha.png', rank10: 'cesar.png' };
-  for (let rank = 1; rank <= 9; rank++) roles[`rank${rank}`] = `rank-${rank}.png`;
+  const roles = { objective: 'optimized/objetivo.webp', trap: 'optimized/armadilha.webp', rank10: 'optimized/cesar.webp' };
+  for (let rank = 1; rank <= 9; rank++) roles[`rank${rank}`] = `optimized/rank-${rank}.webp`;
   w.eval(`els.faction1.value='romanos'; els.faction2.value='romanos'; buildPlayers();`);
   for (const player of w.eval('state.players')) {
     assert.equal(player.pieces.length, 40);
@@ -24,9 +24,16 @@ test('Roman portraits map every role, preserve Caesar and never expose hidden id
   }
   for (const [role, file] of Object.entries(roles)) {
     assert.equal(w.eval(`FACTIONS.romanos.images.${role}`), file);
-    const png = fs.readFileSync(`assets/romanos/${file}`);
+    const source = file.replace('optimized/', '').replace('.webp', '.png');
+    const png = fs.readFileSync(`assets/romanos/${source}`);
     assert.equal(png.subarray(1, 4).toString(), 'PNG');
     assert.equal(png.readUInt32BE(16), png.readUInt32BE(20), 'square source');
+    const webp = fs.readFileSync(`assets/romanos/${file}`);
+    assert.equal(webp.toString('ascii', 0, 4), 'RIFF');
+    assert.equal(webp.toString('ascii', 8, 12), 'WEBP');
+    assert.equal(webp.readUInt16LE(26) & 16383, 512);
+    assert.equal(webp.readUInt16LE(28) & 16383, 512);
+    assert(webp.length < png.length);
     for (const seat of [0, 1]) for (const viewer of [0, 1]) for (const finished of [false, true]) {
       w.dominiusMultiplayer = { active: true, seat: viewer };
       w.eval(`state.gameMode='online'; state.phase='battle'; state.winner=${finished ? 0 : 'null'};
@@ -83,6 +90,9 @@ test('Roman portraits map every role, preserve Caesar and never expose hidden id
   assert.equal(w.document.querySelector('#board .piece').textContent, '?');
   w.eval(`state.combatReveal={attackerId:'roman',defenderId:'other'}; renderBoard();`);
   assert(w.document.querySelector('#board .piece img'));
+  const reused = w.document.querySelector('#board .piece img');
+  w.eval('renderBoard()');
+  assert.equal(w.document.querySelector('#board .piece img'), reused, 'unchanged portraits keep the decoded image element');
   assert.equal(createHash('sha256').update(fs.readFileSync('assets/romanos/cesar.png')).digest('hex'),
     'e046a8d2bee3235998df6f625d91635f22898fa7ad8ef93f3afd50addbed1562');
 });
