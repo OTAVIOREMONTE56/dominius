@@ -5,19 +5,26 @@
         return;
       }
 
+      const perf = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf : null;
+      perf?.begin('BOT');
+      const botDone = perf?.span('bot');
       const actions = getBotActions();
 
       if (!actions.length) {
+        botDone?.();
         state.botThinking = false;
         finishTurn();
+        perf?.finish();
         return;
       }
 
       const action = chooseBotAction(actions);
+      botDone?.();
 
       if (!action) {
         state.botThinking = false;
         finishTurn();
+        perf?.finish();
         return;
       }
 

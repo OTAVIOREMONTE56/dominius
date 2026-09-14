@@ -346,11 +346,15 @@ let boardReversed = null;
 
 function renderBoard() {
   if (visualMotion.freeze) return;
+  const perf = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf : null;
+  const started = perf?.now();
   if (!state.board || state.board.length === 0) {
     els.board.replaceChildren();
     boardCells.clear();
     boardSnapshots.clear();
     boardReversed = null;
+    perf?.board(0, false);
+    if (perf) perf.add('board', perf.now() - started);
     return;
   }
 
@@ -485,6 +489,8 @@ function renderBoard() {
       boardSnapshots.set(key, signature);
   });
   if (fragment) els.board.appendChild(fragment);
+  perf?.board(dirty.length, rebuild);
+  if (perf) perf.add('board', perf.now() - started);
 }
 
 function renderPieceInfo() {
@@ -605,9 +611,14 @@ function renderEndScreen() {
 }
 
 function render() {
+  const perf = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf : null;
+  perf?.render();
+  let started = perf?.now();
   renderTurnLabel();
   renderPlayersSummary();
+  if (perf) perf.add('panels', perf.now() - started);
   renderBoard();
+  started = perf?.now();
   renderPieceInfo();
   renderLostPieces();
   renderLog();
@@ -616,6 +627,7 @@ function render() {
   renderAudioHud();
   renderEndScreen();
   fitBoardToViewport();
+  if (perf) perf.add('panels', perf.now() - started);
 }
 
 function fitBoardToViewport() {
@@ -690,13 +702,20 @@ function motionPause(ms, epoch) {
 }
 
 async function motionTween(element, frames, duration, epoch) {
-  if (!element?.animate) return motionPause(duration, epoch);
+  const done = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf?.span('cssAnimation') : null;
+  if (!element?.animate) {
+    if (!done) return motionPause(duration, epoch);
+    const result = await motionPause(duration, epoch);
+    done?.();
+    return result;
+  }
   const animation = element.animate(frames, {
     duration: cinematicMotion() ? duration : 1,
     easing: 'cubic-bezier(.22,.7,.25,1)', fill: 'forwards',
   });
   visualMotion.animations.add(animation);
   await animation.finished.catch(() => {});
+  done?.();
   return epoch === visualMotion.epoch;
 }
 
@@ -848,6 +867,7 @@ async function runVisualMotion(task) {
       clearMotionEffects();
       visualMotion.busy = visualMotion.freeze = visualMotion.endPending = false;
       render();
+      if (window.DOMINIUS_PERF_DEBUG) window.dominiusPerf?.finish();
     }
   }
 }
@@ -855,8 +875,10 @@ async function runVisualMotion(task) {
 function motionRoute(piece, x, y) {
   const origin = motionCell(piece.x, piece.y);
   const destination = motionCell(x, y);
+  const layoutDone = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf?.span('layout') : null;
   const from = origin.getBoundingClientRect();
   const to = destination.getBoundingClientRect();
+  layoutDone?.();
   origin.classList.add('motion-origin');
   if (cinematicMotion()) origin.classList.add('motion-dust', `motion-${piece.factionKey}`);
   destination.classList.add('motion-destination', `motion-${piece.factionKey}`);
@@ -937,13 +959,16 @@ async function playCombatScene(attacker, defender, battle, epoch) {
 
 window.dominiusVisualizeOnlineAction = (event, players) => {
   if (!event || !visualEffectsEnabled()) return;
+  const perf = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf : null;
   const epoch = visualMotion.epoch;
   if (event.kind === 'move') {
     const destination = motionCell(event.x, event.y);
     if (!destination) return;
+    perf?.hold();
     destination.classList.add('motion-destination', 'motion-dust');
     window.setTimeout(() => destination.classList.remove('motion-destination', 'motion-dust'), 460);
-    void playTurnIntroAnimation(players[1 - event.seat]?.faction, epoch);
+    const intro = playTurnIntroAnimation(players[1 - event.seat]?.faction, epoch);
+    if (perf) void intro.finally(() => perf.release());
     return;
   }
   if (event.kind !== 'combat') return;
@@ -952,6 +977,8 @@ window.dominiusVisualizeOnlineAction = (event, players) => {
   const attackerConfig = PIECE_CONFIG[event.attackerRole];
   const defenderConfig = PIECE_CONFIG[event.defenderRole];
   if (!attackerFaction || !defenderFaction || !attackerConfig || !defenderConfig) return;
+  perf?.hold();
+  const combatDone = perf?.span('combatAnimation');
   const actor = (factionKey, roleKey, config, playerIndex) => ({
     factionKey, roleKey, rank: config.rank, playerIndex,
     isTrap: Boolean(config.isTrap), isObjective: Boolean(config.isObjective),
@@ -959,7 +986,7 @@ window.dominiusVisualizeOnlineAction = (event, players) => {
   });
   const attacker = actor(attackerFaction, event.attackerRole, attackerConfig, event.seat);
   const defender = actor(defenderFaction, event.defenderRole, defenderConfig, 1 - event.seat);
-  void (async () => {
+  const presentation = (async () => {
     const cell = motionCell(event.x, event.y);
     if (cell && !await playEnemyRevealAnimation(defender, cell, epoch, true)) return;
     await playCombatScene(attacker, defender,
@@ -972,6 +999,7 @@ window.dominiusVisualizeOnlineAction = (event, players) => {
     if (epoch === visualMotion.epoch && state.winner === null)
       void playTurnIntroAnimation(players[1 - event.seat]?.faction, epoch);
   })();
+  if (perf) void presentation.finally(() => { combatDone?.(); perf.release(); });
 };
 
 window.dominiusVisualizeOnlineBattleStart = (factionKey) => {
@@ -982,6 +1010,9 @@ window.dominiusVisualizeOnlineBattleStart = (factionKey) => {
 };
 
 async function animateCombatPresentation(attacker, defender, epoch) {
+  const perf = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf : null;
+  const combatDone = perf?.span('combatAnimation');
+  try {
   if (!await playEnemyRevealAnimation(defender, motionCell(defender.x, defender.y), epoch)) return;
   state.selectedPiece = null;
   state.validMoves = [];
@@ -991,7 +1022,9 @@ async function animateCombatPresentation(attacker, defender, epoch) {
   visualMotion.freeze = true;
   const route = motionRoute(attacker, defender.x, defender.y);
   const target = route.destination.querySelector('.piece');
+  const logicDone = perf?.span('logic');
   const battle = resolveBattle(attacker, defender);
+  logicDone?.();
   const distance = Math.hypot(route.dx, route.dy) || 1;
   const lunge = `translate(${route.dx * .82}px, ${route.dy * .82}px) scale(1.08)`;
   if (!await motionTween(route.element, [
@@ -1031,7 +1064,9 @@ async function animateCombatPresentation(attacker, defender, epoch) {
     battle.outcome !== 'defender' && [defender, target.getBoundingClientRect()],
   ].filter(Boolean);
   state.combatReveal = null;
+  const stateDone = perf?.span('state');
   applyBattleResult(attacker, defender, battle.outcome);
+  stateDone?.();
   addLog(battle.reason, battle.outcome === 'attacker' ? 'success' : 'alert');
   if (battle.captureObjective) {
     visualMotion.endPending = true;
@@ -1053,9 +1088,14 @@ async function animateCombatPresentation(attacker, defender, epoch) {
   if (epoch !== visualMotion.epoch) return;
   if (state.gameMode === 'bot' && state.currentTurn === 1 && !await motionPause(180, epoch)) return;
   finishTurn();
+  } finally {
+    combatDone?.();
+  }
 }
 
 function performAnimatedAction(piece, x, y, target = null, bot = false) {
+  const perf = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf : null;
+  perf?.begin(bot ? 'BOT' : 'local', { acao: target ? 'combate' : 'movimento' });
   return runVisualMotion(async (epoch) => {
     state.selectedPiece = null;
     state.validMoves = [];
@@ -1072,16 +1112,21 @@ function performAnimatedAction(piece, x, y, target = null, bot = false) {
     if (bot && !await motionPause(300, epoch)) return;
     if (target) return animateCombatPresentation(piece, target, epoch);
     const route = motionRoute(piece, x, y);
-    if (!await motionTween(route.element, [
+    const pieceDone = perf?.span('pieceAnimation');
+    const moved = await motionTween(route.element, [
       { transform: 'translate(0, 0) scale(1)', offset: 0 },
       { transform: `translate(${-route.dx * .06}px, ${-route.dy * .06}px) scale(.97)`, offset: .12 },
       { transform: `translate(${route.dx * .78}px, ${route.dy * .78}px) scale(1.07)`, offset: .7 },
       { transform: `translate(${route.dx * 1.04}px, ${route.dy * 1.04}px) scale(1.03)`, offset: .9 },
       { transform: `translate(${route.dx}px, ${route.dy}px) scale(1)`, offset: 1 },
-    ], 460, epoch)) return;
+    ], 460, epoch);
+    pieceDone?.();
+    if (!moved) return;
     route.destination.classList.add('motion-landing');
     if (!await motionPause(35, epoch)) return;
+    const stateDone = perf?.span('state');
     movePiece(piece, x, y);
+    stateDone?.();
     if (bot && !await motionPause(180, epoch)) return;
     finishTurn();
   });
@@ -1303,6 +1348,8 @@ function handleBattleCellClick(x, y) {
   const clickedPiece = cell.piece;
 
   if (state.selectedPiece) {
+    const perf = window.DOMINIUS_PERF_DEBUG ? window.dominiusPerf : null;
+    const logicStart = perf?.now();
     const isValidMove = state.validMoves.some((move) => move.x === x && move.y === y);
 
     if (!isValidMove) {
@@ -1312,6 +1359,8 @@ function handleBattleCellClick(x, y) {
       return;
     }
 
+    perf?.begin('local', { acao: clickedPiece ? 'combate' : 'movimento' }, logicStart);
+    if (perf) perf.add('logic', perf.now() - logicStart);
     const piece = state.selectedPiece;
 
     if (clickedPiece) {

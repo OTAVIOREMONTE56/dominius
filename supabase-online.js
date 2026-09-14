@@ -90,6 +90,9 @@
     if(!last||!boardOpen||last.players.length<2)return;
     const preparing=last.match.phase==='setup',me=last.players[seat];
     if(!force&&lastVersion===last.match.version)return;
+    const perf=window.DOMINIUS_PERF_DEBUG?window.dominiusPerf:null;
+    perf?.onlineRenderStart(last.match.version);
+    const stateDone=perf?.span('state');
     const oldVersion=lastVersion,oldPhase=state.phase;lastVersion=last.match.version;
     cancelVisualMotion();
     const pieces=last.pieces.map(describePiece);
@@ -101,8 +104,10 @@
       started:last.match.phase==='battle',battleStarted:!preparing,winner:last.match.winner,loser:last.match.winner===null?null:1-last.match.winner,
       readyPlayers:last.players.map(p=>p.ready),selectedPiece:null,validMoves:[],transitionVisible:false,combatReveal:null,botThinking:false,botAnimation:null,
       log:last.moves.slice().reverse().map(m=>({text:moveText(m),type:m.event.kind==='combat'?'success':''}))});
+    stateDone?.();
     els.startScreen.classList.add('hidden');els.gameScreen.classList.remove('hidden');toolbar.hidden=false;
     render();
+    perf?.onlineRendered();
     if(last.match.phase==='finished' && last.match.winner===null){
       els.endScreenTitle.textContent='EMPATE';
       els.endScreenSubtitle.textContent='Aposta devolvida aos dois jogadores.';
@@ -310,7 +315,10 @@
     try {
       do {
         refreshAgain=false;
-        const snapshot=await cloud.rpc('dominius_snapshot',{p_room:roomId});
+        const networkStart=window.DOMINIUS_PERF_DEBUG?performance.now():0;
+        let snapshot;
+        try{snapshot=await cloud.rpc('dominius_snapshot',{p_room:roomId});}
+        finally{if(window.DOMINIUS_PERF_DEBUG)window.dominiusPerf?.snapshotNetwork(performance.now()-networkStart,networkStart);}
         if(generation!==epoch)return;
         apply(snapshot);
       }while(refreshAgain);
@@ -340,7 +348,7 @@
     }catch(error){if(generation===epoch)chatStatus.textContent=error.message;}
     finally{chatLoading=false;if(roomId&&(chatAgain||generation!==epoch))loadChat();}
   }
-  function syncNow(){if(roomId){refresh();loadChat();}}
+  function syncNow(){if(roomId){if(window.DOMINIUS_PERF_DEBUG)window.dominiusPerf?.signal('poll');refresh();loadChat();}}
   function scheduleFallback(ready) {
     realtimeReady=ready;clearInterval(fallback);
     // Reconciliação rara quando conectado; recuperação curta apenas sem Realtime.
@@ -357,7 +365,7 @@
     roomId=id;storage.set(roomKey(),id);lastVersion=-1;lastVisualMoveId=0;
     const db=await cloud.client();if(generation!==epoch)return;
     const current=()=>generation===epoch&&roomId===id;
-    const changed=()=>{if(current())refresh();};
+    const changed=()=>{if(current()){if(window.DOMINIUS_PERF_DEBUG)window.dominiusPerf?.signal('realtime');refresh();}};
     const chatted=()=>{if(current())loadChat();};
     scheduleFallback(false);
     channel=db.channel(`dominius:${id}:${user.id}`)
@@ -491,6 +499,7 @@
       const cell=state.board[y]?.[x];if(!cell||cell.blocked)return;
       const selected=state.selectedPiece;
       if(selected&&state.validMoves.some(m=>m.x===x&&m.y===y)) {
+        if(!preparing&&window.DOMINIUS_PERF_DEBUG)window.dominiusPerf?.begin('online-local',{acao:'movimento'});
         if(preparing) {
           const a=draft.find(p=>p.id===selected.id),b=draft.find(p=>p.x===x&&p.y===y);
           if(b)Object.assign(b,{x:a.x,y:a.y});Object.assign(a,{x,y});saveDraft();renderGame(true);
