@@ -1011,8 +1011,15 @@ function performAnimatedAction(piece, x, y, target = null, bot = false) {
   return runVisualMotion(async (epoch) => {
     state.selectedPiece = null;
     state.validMoves = [];
-    if (bot) state.botAnimation = { origin: { x: piece.x, y: piece.y }, destination: null };
-    render();
+    if (bot) {
+      state.botAnimation = { origin: { x: piece.x, y: piece.y }, destination: null };
+      // O tabuleiro já representa esta posição: apenas marque a origem do BOT.
+      // Reconstruir as 100 casas aqui bloqueia o primeiro frame da animação.
+      els.board.querySelector(`.cell[data-x="${piece.x}"][data-y="${piece.y}"]`)?.classList.add('bot-origin');
+      renderTurnLabel();
+    } else {
+      render();
+    }
     visualMotion.freeze = true;
     if (bot && !await motionPause(300, epoch)) return;
     if (target) return animateCombatPresentation(piece, target, epoch);
@@ -1063,11 +1070,13 @@ function finishTurn() {
       if (window.botAI && typeof window.botAI.takeTurn === 'function') {
         window.botAI.takeTurn();
       }
-      render();
+      // takeTurn inicia a apresentação (ou finishTurn se não houver ação).
+      // Evita uma segunda reconstrução síncrona do tabuleiro no mesmo frame.
+      renderTurnLabel();
     }, 1500 + Math.random() * 500);
   }
 
-  render();
+  if (!visualMotion.busy) render();
   void playTurnIntroAnimation(state.players[state.currentTurn].faction);
 }
 
