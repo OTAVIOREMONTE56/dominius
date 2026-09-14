@@ -148,7 +148,11 @@ function factionCrest(factionKey) {
   return art;
 }
 
+let renderedPlayersSummary = null;
 function renderPlayersSummary() {
+  const signature = JSON.stringify([state.phase, state.currentTurn,
+    state.players.map(player => [player.faction, player.name, player.ready, player.lostPieces.length])]);
+  if (renderedPlayersSummary === signature && els.playersSummary.children.length === state.players.length) return;
   const previousCardFactions = [...els.playersSummary.querySelectorAll('.player-card')]
     .map(card => card.dataset.faction);
   els.playersSummary.innerHTML = '';
@@ -200,12 +204,17 @@ function renderPlayersSummary() {
     if (previousCardFactions[index] !== player.faction) cardEmblem.classList.add('crest-arrive');
     els.playersSummary.appendChild(card);
   });
+  renderedPlayersSummary = signature;
 }
 
+let renderedLostPieces = null;
 function renderLostPieces() {
   if (!els.lostPieces) {
     return;
   }
+  const signature = JSON.stringify(state.players.map(player => [player.faction,
+    player.lostPieces.map(piece => [piece.roleKey, piece.name, piece.label])]));
+  if (renderedLostPieces === signature && els.lostPieces.children.length === state.players.length) return;
 
   els.lostPieces.innerHTML = '';
 
@@ -246,6 +255,7 @@ function renderLostPieces() {
     section.appendChild(list);
     els.lostPieces.appendChild(section);
   });
+  renderedLostPieces = signature;
 }
 
 function renderTurnLabel() {
@@ -330,43 +340,71 @@ function medalIcon(piece) {
   return `<svg class="medal-symbol" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[kind]}</svg>`;
 }
 
+const boardCells = new Map();
+const boardSnapshots = new Map();
+let boardReversed = null;
+
 function renderBoard() {
   if (visualMotion.freeze) return;
-  const reusableArtwork = new Map();
-  els.board.querySelectorAll('img.piece-art').forEach(image => {
-    const path = image.getAttribute('src');
-    if (!reusableArtwork.has(path)) reusableArtwork.set(path, []);
-    reusableArtwork.get(path).push(image);
-  });
-  els.board.innerHTML = '';
-
   if (!state.board || state.board.length === 0) {
+    els.board.replaceChildren();
+    boardCells.clear();
+    boardSnapshots.clear();
+    boardReversed = null;
     return;
   }
 
-  const rowIndexes = state.gameMode === 'bot' || (state.gameMode === 'online' && window.dominiusMultiplayer?.seat === 0)
-    ? Array.from({ length: BOARD_SIZE }, (_, index) => BOARD_SIZE - 1 - index)
-    : Array.from({ length: BOARD_SIZE }, (_, index) => index);
+  const reversed = state.gameMode === 'bot'
+    || (state.gameMode === 'online' && window.dominiusMultiplayer?.seat === 0);
+  const rebuild = els.board.children.length !== BOARD_SIZE * BOARD_SIZE
+    || boardCells.size !== BOARD_SIZE * BOARD_SIZE || boardReversed !== reversed;
+  const validMoves = new Map(state.validMoves.map(move => [`${move.x},${move.y}`, move]));
+  const dirty = [];
+  const rowIndexes = Array.from({ length: BOARD_SIZE }, (_, index) => reversed ? BOARD_SIZE - 1 - index : index);
+  rowIndexes.forEach(rowIndex => state.board[rowIndex].forEach(cell => {
+    const piece = cell.piece;
+    const selected = state.selectedPiece?.x === cell.x && state.selectedPiece?.y === cell.y;
+    const validMove = validMoves.get(`${cell.x},${cell.y}`);
+    const origin = state.botAnimation?.origin?.x === cell.x && state.botAnimation?.origin?.y === cell.y;
+    const destination = state.botAnimation?.destination?.x === cell.x && state.botAnimation?.destination?.y === cell.y;
+    const hidden = piece && !getVisiblePieceForCell(piece) && (state.winner === null || state.gameMode === 'online');
+    const signature = JSON.stringify([cell.blocked, selected, validMove?.type, origin, destination,
+      piece?.id, piece?.playerIndex, piece?.factionKey, piece?.roleKey, piece?.rank,
+      piece?.short, piece?.label, piece?.name, piece?.image, piece?.isTrap, piece?.isObjective,
+      piece && state.players[piece.playerIndex]?.faction, hidden]);
+    const key = `${cell.x},${cell.y}`;
+    if (rebuild || boardSnapshots.get(key) !== signature) dirty.push({ cell, key, signature, selected, validMove, origin, destination });
+  }));
 
-  rowIndexes.forEach((rowIndex) => {
-    const row = state.board[rowIndex];
-
-    row.forEach((cell) => {
-      const cellEl = document.createElement('button');
-      cellEl.type = 'button';
+  const reusableArtwork = new Map();
+  const oldCells = rebuild ? Array.from(els.board.children) : dirty.map(({ key }) => boardCells.get(key)).filter(Boolean);
+  oldCells.forEach(cellEl => cellEl.querySelectorAll('img.piece-art').forEach(image => {
+    const path = image.getAttribute('src');
+    if (!reusableArtwork.has(path)) reusableArtwork.set(path, []);
+    reusableArtwork.get(path).push(image);
+  }));
+  if (rebuild) {
+    els.board.replaceChildren();
+    boardCells.clear();
+    boardSnapshots.clear();
+    boardReversed = reversed;
+  }
+  const fragment = rebuild ? document.createDocumentFragment() : null;
+  dirty.forEach(({ cell, key, signature, selected, validMove, origin, destination }) => {
+      const cellEl = boardCells.get(key) || document.createElement('button');
+      if (!boardCells.has(key)) cellEl.type = 'button';
       cellEl.className = 'cell';
       cellEl.dataset.x = String(cell.x);
       cellEl.dataset.y = String(cell.y);
+      cellEl.replaceChildren();
 
       if (cell.blocked) {
         cellEl.classList.add('blocked');
       }
 
-      if (state.selectedPiece && state.selectedPiece.x === cell.x && state.selectedPiece.y === cell.y) {
+      if (selected) {
         cellEl.classList.add('selected');
       }
-
-      const validMove = state.validMoves.find((move) => move.x === cell.x && move.y === cell.y);
 
       if (validMove) {
         cellEl.classList.add('valid-move');
@@ -376,11 +414,11 @@ function renderBoard() {
         }
       }
 
-      if (state.botAnimation && state.botAnimation.origin && state.botAnimation.origin.x === cell.x && state.botAnimation.origin.y === cell.y) {
+      if (origin) {
         cellEl.classList.add('bot-origin');
       }
 
-      if (state.botAnimation && state.botAnimation.destination && state.botAnimation.destination.x === cell.x && state.botAnimation.destination.y === cell.y) {
+      if (destination) {
         cellEl.classList.add('bot-destination');
       }
 
@@ -439,10 +477,14 @@ function renderBoard() {
         cellEl.appendChild(pieceEl);
       }
 
-      cellEl.addEventListener('click', () => handleCellClick(cell.x, cell.y));
-      els.board.appendChild(cellEl);
-    });
+      if (!boardCells.has(key)) {
+        cellEl.addEventListener('click', () => handleCellClick(cell.x, cell.y));
+        boardCells.set(key, cellEl);
+        fragment.appendChild(cellEl);
+      }
+      boardSnapshots.set(key, signature);
   });
+  if (fragment) els.board.appendChild(fragment);
 }
 
 function renderPieceInfo() {
@@ -670,6 +712,12 @@ function clearMotionEffects() {
   visualMotion.controls = [];
   els.board.classList.remove('motion-busy');
   els.board.removeAttribute('aria-busy');
+  // O tabuleiro incremental mantém as casas: limpe os efeitos transitórios
+  // que antes desapareciam quando todas elas eram recriadas.
+  els.board.querySelectorAll('.cell[class*="motion-"]').forEach(cell => {
+    Array.from(cell.classList).filter(name => name.startsWith('motion-'))
+      .forEach(name => cell.classList.remove(name));
+  });
 }
 
 function motionOverlay(element) {
