@@ -7,7 +7,7 @@
     <p id="online-notice" role="status" aria-live="polite"></p>
     <div id="online-actions"><p class="coin-balance"><span aria-hidden="true">♛</span> SEU SALDO <strong data-coin-balance>—</strong></p>
       <label for="online-faction">Seu reino</label><select id="online-faction"></select>
-      <div class="online-economy"><h3>BATALHA LIVRE</h3><p>Jogue sem arriscar Coroas. Vitória: +50 Coroas.</p>
+      <div class="online-economy"><h3>BATALHA LIVRE</h3><p>Jogue sem arriscar Coroas. Vitória: +1 Coroa.</p>
         <label><input type="radio" name="online-mode" value="free" checked> Batalha livre</label>
         <h3>BATALHA VALENDO COROAS</h3><p>Coloque suas Coroas em jogo.</p>
         <label><input type="radio" name="online-mode" value="wager"> Valendo Coroas</label>
@@ -50,6 +50,7 @@
   let user=null,roomId=null,seat=null,last=null,draft=null,channel=null,heartbeat=null,fallback=null;
   let epoch=0,busy=false,refreshRunning=false,refreshAgain=false,boardOpen=false,lastVersion=-1,lastChatId=0,lastVisualMoveId=0,chatBusy=false,pendingChat=null;
   let attaching=null,chatLoading=false,chatAgain=false,realtimeReady=false;
+  let rewardMatchId=null,rewardToken=0,rewardTimer=null,rewardIntroTimer=null,rewardFinish=null;
   const storage={get:key=>{try{return sessionStorage.getItem(key);}catch{return null;}},set:(key,value)=>{try{sessionStorage.setItem(key,value);}catch{}},remove:key=>{try{sessionStorage.removeItem(key);}catch{}}};
   const roomKey=()=>`dominius-supabase-room:${user?.id}`;
   const draftKey=()=>`dominius-supabase-draft:${user?.id}:${roomId}`;
@@ -142,7 +143,7 @@
     q('online-room-code').textContent=`Código da sala: ${s.room.code}`;
     q('online-room-wager').textContent=s.match.wager_amount>0
       ?`APOSTA: ${s.match.wager_amount} COROAS · POTE: ${s.match.pot_amount||s.match.wager_amount*2} COROAS · ${s.match.wager_status==='locked'?'APOSTA CONFIRMADA':'AGUARDANDO ADVERSÁRIO'}`
-      :'BATALHA LIVRE · Vitória: +50 COROAS';
+      :'BATALHA LIVRE · Vitória: +1 COROA';
     q('online-players').replaceChildren();
     for(const player of s.players) {
       const li=document.createElement('li');
@@ -156,26 +157,151 @@
     input.disabled=s.room.status==='closed';
     if(s.match.wager_status==='locked' && previousWagerStatus!=='locked')
       economy.wallet().catch(error=>message(`Saldo de Coroas indisponível: ${error.message}`));
-    if(s.match.phase==='finished')showCoinResult(s);
     renderGame();
+    if(boardOpen&&s.match.phase==='finished')showCoinResult(s);
   }
   async function showCoinResult(s){
-    const result=els.endScreen.querySelector('.end-coin-result')||document.createElement('p');
-    result.className='end-coin-result';
-    result.textContent='Confirmando Coroas…';
-    els.endScreen.querySelector('.end-screen-copy')?.append(result);
+    if(rewardMatchId===s.match.id)return;
+    rewardMatchId=s.match.id;const token=++rewardToken;
+    const panel=els.endScreen.querySelector('#online-reward')||document.createElement('section');
+    panel.id='online-reward';panel.className='online-reward';panel.hidden=false;
+    panel.innerHTML='<header class="online-reward-header"><span>BATALHA ONLINE</span><strong>DOMINIUS</strong><span>ARENA DOS REINOS</span></header><div class="online-reward-stage"><div class="online-reward-banners" aria-label="Reinos da partida"></div><section class="online-reward-center"><div class="online-reward-vessel" aria-hidden="true">♛</div><p class="online-reward-label"></p><strong class="online-reward-pot"></strong><p class="online-reward-gain" role="status" aria-live="polite"></p></section><div class="online-reward-flight" aria-hidden="true"></div></div><footer class="online-reward-footer"><p class="online-reward-balance"></p><p class="online-reward-streak"></p><button class="online-reward-continue" type="button">CONTINUAR</button><small class="online-reward-skip">Clique para pular a animação</small></footer>';
+    els.endScreen.append(panel);els.endScreen.classList.add('online-result-active');
+    const winner=s.match.winner===seat,tie=s.match.winner===null,wager=Number(s.match.wager_amount||0);
+    panel.dataset.mode=wager?'wager':'free';panel.dataset.result=tie?'tie':winner?'winner':'loser';
+    panel.querySelector('.online-reward-label').textContent='Confirmando recompensa…';
+    panel.querySelector('.online-reward-continue').addEventListener('click',()=>{
+      if(rewardFinish){rewardFinish();return;}
+      els.playAgainBtn.click();
+    });
     try{
-      const official=await economy.wallet();
-      if(!last || last.match.id!==s.match.id)return;
-      const wager=s.match.wager_amount||0;
-      if(s.match.winner===seat)result.textContent=wager
-        ?`VITÓRIA\nPOTE CONQUISTADO\n+${wager*2} COROAS\nNOVO SALDO\n${economy.format(official)} COROAS`
-        :`VITÓRIA\nRECOMPENSA\n+50 COROAS\nNOVO SALDO\n${economy.format(official)} COROAS`;
-      else if(s.match.winner===null)result.textContent=wager
-        ?`EMPATE\n${wager} COROAS DEVOLVIDAS\nSALDO\n${economy.format(official)} COROAS`
-        :'EMPATE · Nenhuma Coroa conquistada.';
-      else result.textContent=wager?`DERROTA\nAPOSTA PERDIDA\n-${wager} COROAS\nSALDO\n${economy.format(official)} COROAS`:'Nenhuma Coroa conquistada.';
-    }catch(error){result.textContent=`Coroas indisponíveis: ${error.message}`;}
+      const db=await cloud.client();
+      const {data,error}=await db.from('coin_transactions').select('amount,type,balance_after')
+        .eq('match_id',s.match.id).eq('user_id',user.id)
+        .in('type',['wager_win','wager_refund','online_win_reward']);
+      if(error)throw error;
+      if(token!==rewardToken||!last||last.match.id!==s.match.id)return;
+      const payoutType=tie?'wager_refund':wager?'wager_win':'online_win_reward';
+      const payout=data?.find(row=>row.type===payoutType);
+      const pot=Number(s.match.pot_amount||0);
+      if(wager && (tie?s.match.wager_status!=='refunded':s.match.wager_status!=='settled'))throw new Error('Resultado financeiro ainda não confirmado.');
+      if((winner||tie&&wager) && (!payout||Number(payout.amount)!==(tie?wager:wager?pot:1)))
+        throw new Error('Recompensa oficial ainda não disponível.');
+      const amount=winner?Number(payout.amount):tie&&wager?Number(payout.amount):0;
+      const animate=!!(wager||winner);
+      const unit=n=>`${economy.format(n)} ${n===1?'COROA':'COROAS'}`;
+      const bannerHost=panel.querySelector('.online-reward-banners');
+      const realms=tie?[0,1]:[s.match.winner,1-s.match.winner];
+      for(const playerSeat of realms){
+        const player=s.players.find(p=>p.seat===playerSeat);
+        const key=player?.faction;
+        if(!Object.hasOwn(FACTIONS,key))continue;
+        const card=document.createElement('div');
+        card.className=`online-reward-banner ${tie?'neutral':playerSeat===s.match.winner?'victor':'vanquished'}`;
+        card.dataset.faction=key;card.dataset.seat=String(playerSeat);
+        const outcome=document.createElement('h3');outcome.className='online-reward-outcome';
+        outcome.textContent=tie?'EMPATE':playerSeat===s.match.winner?'VITÓRIA':'DERROTA';
+        const flag=document.createElement('img');flag.src=`assets/faccoes/${key}.png`;
+        flag.alt=`Estandarte dos ${FACTIONS[key].label}`;
+        const identity=document.createElement('div');identity.className='online-reward-identity';
+        const name=document.createElement('strong');name.textContent=`Jogador ${playerSeat+1}`;
+        const patent=document.createElement('small');patent.textContent='Patente indisponível';
+        const stats=document.createElement('dl');stats.className='online-reward-stats';
+        for(const [field,label] of [['streak','SEQUÊNCIA'],['wins','VITÓRIAS'],['losses','DERROTAS'],['win_rate','TAXA DE VITÓRIA']]){
+          const term=document.createElement('dt');term.textContent=label;
+          const value=document.createElement('dd');value.dataset.stat=field;value.textContent='—';stats.append(term,value);
+        }
+        identity.append(name,patent);card.append(outcome,flag,identity,stats);bannerHost.append(card);
+      }
+      // O ranking expõe apenas nomes públicos e patentes; fora do Top 50, mantém-se o identificador da sala.
+      cloud.rpc('dominius_ranking').then(ranking=>{
+        if(token!==rewardToken||!ranking)return;
+        const rows=[...(ranking.top||[]),ranking.me].filter(Boolean);
+        for(const card of bannerHost.children){
+          const player=s.players.find(p=>p.seat===Number(card.dataset.seat));
+          const row=rows.find(item=>item.user_id===player?.user_id);
+          if(row){card.querySelector('strong').textContent=row.name||`Jogador ${player.seat+1}`;
+            card.querySelector('small').textContent=row.patent||'Patente indisponível';
+            for(const field of ['streak','wins','losses','win_rate']){
+              const value=row[field];if(value!==undefined&&value!==null)
+                card.querySelector(`[data-stat="${field}"]`).textContent=field==='win_rate'?`${value}%`:String(value);
+            }}
+        }
+      }).catch(()=>{});
+      const revealPot=()=>{
+        if(token!==rewardToken||panel.classList.contains('complete'))return;
+        rewardIntroTimer=null;
+        if(!animate){finish();return;}
+        panel.classList.remove('intro');panel.classList.add('pot-visible');
+        panel.querySelector('.online-reward-label').textContent=wager?'POTE DA BATALHA':winner?'BATALHA LIVRE':tie?'EMPATE':'BATALHA LIVRE';
+        panel.querySelector('.online-reward-pot').textContent=wager?unit(pot):winner?'1 COROA':'';
+        if(animate)launchCoins();
+        panel.classList.add('playing');rewardTimer=setTimeout(finish,3500);
+      };
+      const seenKey=`dominius-reward:${user.id}:${s.match.id}`;
+      const seen=storage.get(seenKey)==='1';storage.set(seenKey,'1');
+      const flight=panel.querySelector('.online-reward-flight');
+      const launchCoins=()=>{
+        if(!animate||seen)return;
+        const origin=panel.querySelector('.online-reward-vessel').getBoundingClientRect();
+        const bounds=flight.getBoundingClientRect();
+        const coinCount=wager?(flight.clientWidth>=700?12:flight.clientWidth>=440?10:8):1;
+        for(let i=0;i<coinCount;i++){
+          const coin=document.createElement('span');coin.className='online-reward-coin';coin.textContent='♛';
+          const destination=tie?i%2:s.match.winner;
+          const target=bannerHost.querySelector(`[data-seat="${destination}"] img`)?.getBoundingClientRect();
+          const startX=origin.width?origin.left+origin.width/2-bounds.left:flight.clientWidth/2;
+          const startY=origin.height?origin.top+origin.height/2-bounds.top:flight.clientHeight*.66;
+          const endX=target?.width?target.left+target.width/2-bounds.left:destination===0?flight.clientWidth*.18:flight.clientWidth*.82;
+          const endY=target?.height?target.top+target.height*.55-bounds.top:flight.clientHeight*.36;
+          coin.style.setProperty('--reward-start-x',`${startX}px`);
+          coin.style.setProperty('--reward-start-y',`${startY}px`);
+          coin.style.setProperty('--reward-end-x',`${endX}px`);
+          coin.style.setProperty('--reward-end-y',`${endY}px`);
+          coin.style.setProperty('--reward-mid-x',`${startX+(endX-startX)*.55}px`);
+          coin.style.setProperty('--reward-mid-y',`${Math.min(startY,endY)-45-i%4*9}px`);
+          coin.style.setProperty('--reward-delay',`${wager?700+i*60:700}ms`);
+          coin.style.setProperty('--reward-scale',`${(0.88+i%4*0.07).toFixed(2)}`);
+          const spark=document.createElement('i');spark.className='online-reward-spark';
+          spark.style.setProperty('--reward-end-x',`${endX}px`);
+          spark.style.setProperty('--reward-end-y',`${endY}px`);
+          spark.style.setProperty('--reward-spark-delay',`${wager?700+i*60+2100:2800}ms`);
+          flight.append(coin,spark);
+        }
+      };
+      const finish=()=>{
+        if(token!==rewardToken||!rewardFinish)return;
+        clearTimeout(rewardTimer);clearTimeout(rewardIntroTimer);rewardTimer=null;rewardIntroTimer=null;rewardFinish=null;
+        panel.classList.remove('playing','intro');panel.classList.add('pot-visible','complete');
+        panel.querySelector('.online-reward-label').textContent=wager?'POTE DA BATALHA':winner?'BATALHA LIVRE':tie?'EMPATE':'BATALHA LIVRE';
+        panel.querySelector('.online-reward-pot').textContent=wager?unit(pot):winner?'1 COROA':'';
+        panel.querySelector('.online-reward-skip').hidden=true;
+        panel.querySelector('.online-reward-gain').textContent=amount
+          ?tie?`${unit(amount)} DEVOLVIDAS`:`+${unit(amount)}`
+          :winner?'':'Nenhuma Coroa recebida';
+        if(payout)panel.querySelector('.online-reward-balance').textContent=`SALDO CONFIRMADO: ${unit(Number(payout.balance_after))}`;
+        economy.wallet().then(balance=>{
+          if(token===rewardToken&&balance!==null)panel.querySelector('.online-reward-balance').textContent=`SALDO ATUAL: ${unit(balance)}`;
+        }).catch(()=>{});
+      };
+      rewardFinish=finish;
+      if(!seen&&!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+        panel.classList.add('intro');rewardIntroTimer=setTimeout(revealPot,2500);
+      }else finish();
+      cloud.rpc('dominius_my_stats').then(stats=>{
+        if(token===rewardToken&&stats){
+          const own=bannerHost.querySelector(`[data-seat="${seat}"]`);
+          if(own)for(const [field,key] of [['streak','current_win_streak'],['wins','wins'],['losses','losses'],['win_rate','win_rate']]){
+            if(stats[key]!==undefined&&stats[key]!==null)
+              own.querySelector(`[data-stat="${field}"]`).textContent=field==='win_rate'?`${stats[key]}%`:String(stats[key]);
+          }
+        }
+        if(token===rewardToken&&stats&&!winner)
+          panel.querySelector('.online-reward-streak').textContent=`Sequência atual: ${stats.current_win_streak}`;
+      }).catch(()=>{});
+    }catch(error){
+      if(token===rewardToken){rewardMatchId=null;panel.classList.add('pot-visible');panel.querySelector('.online-reward-label').textContent=`Coroas indisponíveis: ${error.message}`;panel.querySelector('.online-reward-skip').hidden=true;economy.wallet().catch(()=>{});}
+    }
   }
   async function refresh() {
     if(!roomId)return;
@@ -253,7 +379,10 @@
     await refresh();await loadChat();
   }
   async function detach() {
-    epoch++;clearInterval(heartbeat);clearInterval(fallback);
+    epoch++;rewardToken++;clearTimeout(rewardTimer);clearTimeout(rewardIntroTimer);rewardTimer=null;rewardIntroTimer=null;rewardFinish=null;rewardMatchId=null;
+    els.endScreen.querySelector('#online-reward')?.remove();els.endScreen.classList.remove('online-result-active');
+    els.endScreen.querySelector('.end-screen-visual')?.classList.remove('online-reward-no-art');
+    clearInterval(heartbeat);clearInterval(fallback);
     const old=channel;channel=null;realtimeReady=false;chatAgain=false;
     roomId=null;seat=null;last=null;draft=null;lastVersion=-1;lastChatId=0;lastVisualMoveId=0;boardOpen=false;refreshAgain=false;
     toolbar.hidden=true;chat.hidden=true;messages.replaceChildren();input.value='';pendingChat=null;
@@ -333,7 +462,7 @@
   q('online-account').addEventListener('click',()=>{dialog.close();window.DominiusAccount.open();});
   q('online-close').addEventListener('click',()=>run(async()=>{if(roomId)await leave();else dialog.close();}));
   dialog.addEventListener('cancel',e=>{e.preventDefault();if(boardOpen){dialog.close();renderGame(true);}else q('online-close').click();});
-  q('online-prepare').addEventListener('click',()=>{if(!last||last.players.length<2)return;boardOpen=true;dialog.close();window.audioManager?.unlock?.();window.audioManager?.playAmbient?.();renderGame(true);});
+  q('online-prepare').addEventListener('click',()=>{if(!last||last.players.length<2)return;boardOpen=true;dialog.close();window.audioManager?.unlock?.();window.audioManager?.playAmbient?.();renderGame(true);if(last.match.phase==='finished')showCoinResult(last);});
   toolbar.querySelector('button').addEventListener('click',open);
   document.getElementById('online-entry').addEventListener('click',open);
   [[els.randomizeBtn,()=>{

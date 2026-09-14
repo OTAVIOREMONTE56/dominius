@@ -55,6 +55,46 @@
 #account-dialog .account-stats > div { min-width: 0; border: 1px solid #8b714133; background: #080e1233; padding: 10px 12px; }
 #account-dialog dt { font: 11px Arial, sans-serif; color: #baa98c; }
 #account-dialog dd { margin: 5px 0 0; font-size: 17px; color: #eedcba; overflow-wrap: anywhere; }
+.profile-patent { margin: 12px 0; padding: 10px 14px; border: 1px solid #a98750; color: #cbb58f; letter-spacing: .1em; }
+.profile-patent strong { display: block; margin-top: 4px; color: #f2d59e; font-size: 20px; letter-spacing: .03em; }
+#start-screen #ranking-entry { cursor: pointer; }
+.ranking-dialog { width: min(1180px, calc(100% - 24px)); max-width: 1180px; max-height: calc(100svh - 24px); margin: auto; padding: 26px; overflow: auto; border: 1px solid #b19057; color: #ead8b8; background: repeating-linear-gradient(125deg,#ffffff02 0 1px,transparent 1px 5px),linear-gradient(145deg,#34302a,#11191e 60%,#211c17); box-shadow: inset 0 0 0 5px #12191c,inset 0 0 0 6px #94774966,0 25px 90px #000c; font: 14px Georgia,serif; }
+.ranking-dialog::backdrop { background: #03070de8; }
+.ranking-dialog h2 { margin: 4px 35px 18px 0; color: #f1d7a4; font-size: 25px; }
+.ranking-subtitle { margin: -10px 0 22px; color: #c8b99d; }
+.ranking-kicker { margin: 0; color: #c4a773; font-size: 11px; letter-spacing: .2em; }
+.ranking-close { position: absolute; right: 9px; top: 7px; padding: 4px 12px; border: 0; background: none; color: #e6c68b; font-size: 28px; cursor: pointer; }
+.ranking-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.ranking-row { display: grid; grid-template-columns: 44px minmax(115px,1.6fr) minmax(125px,1.3fr) repeat(6,minmax(62px,.65fr)); align-items: center; gap: 7px; padding: 10px; border: 1px solid #8b714144; background: #070e1288; font-size: 13px; }
+.ranking-head { position: sticky; top: -26px; z-index: 1; margin-bottom: 6px; color: #bfa778; background: #1b2225; font: 10px Arial,sans-serif; letter-spacing: .04em; }
+.ranking-row span { min-width: 0; }
+.ranking-position { color: #dcb676; font-weight: bold; }
+.ranking-name { overflow-wrap: anywhere; color: #f2dfbb; }
+.ranking-patent { display: flex; align-items: center; gap: 7px; color: #dfc696; }
+.ranking-patent::before { content: '✦'; flex: none; display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid #aa8956; border-radius: 50%; background: #58462a66; color: #e8c786; font-size: 10px; }
+.ranking-head .ranking-patent::before { display: none; }
+.ranking-place-1 { border-color: #d9ae53; background: linear-gradient(90deg,#8b682d44,#0b121499 55%); }
+.ranking-place-1 .ranking-position { color: #f6d476; }
+.ranking-place-2 { border-color: #b9c1c5; background: linear-gradient(90deg,#aeb9c633,#0b121499 55%); }
+.ranking-place-2 .ranking-position { color: #e1e5e6; }
+.ranking-place-3 { border-color: #b67f53; background: linear-gradient(90deg,#a66a3c33,#0b121499 55%); }
+.ranking-place-3 .ranking-position { color: #e5a976; }
+.ranking-row.ranking-me { outline: 1px solid #e8c47d; outline-offset: -3px; box-shadow: inset 0 0 14px #b38b3822; }
+.ranking-own-label { margin: 18px 0 8px; color: #e1bc78; letter-spacing: .12em; }
+.ranking-dialog #ranking-content > button { padding: 10px 22px; border: 1px solid #bd965a; background: #3b2c1d; color: #f4dfbb; cursor: pointer; }
+@media (max-width: 900px) {
+  .ranking-dialog { padding: 22px 18px; }
+  .ranking-row { grid-template-columns: 38px minmax(100px,1.4fr) minmax(110px,1.2fr) repeat(3,minmax(58px,.7fr)); }
+  .ranking-losses,.ranking-matches,.ranking-best { display: none; }
+}
+@media (max-width: 620px) {
+  .ranking-dialog { padding: 20px 14px; }
+  .ranking-row { grid-template-columns: 34px minmax(0,1fr) 62px; gap: 4px 8px; font-size: 12px; }
+  .ranking-head { top: -20px; }
+  .ranking-patent { grid-column: 2; grid-row: 2; font-size: 11px; }
+  .ranking-wins { grid-column: 3; grid-row: 1 / span 2; text-align: right; }
+  .ranking-streak,.ranking-rate { display: none; }
+}
 @media (max-width: 760px) {
   #start-screen .account-entry { position: static; justify-self: end; margin: 0; }
 }

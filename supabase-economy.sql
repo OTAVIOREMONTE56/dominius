@@ -136,7 +136,7 @@ begin
         new.wager_status:='settled';
       end if;
     elsif winner_id is not null then
-      perform dominius_private.change_coins(winner_id,50,'online_win_reward',new.id);
+      perform dominius_private.change_coins(winner_id,1,'online_win_reward',new.id);
     end if;
   end if;
   return new;

@@ -10,15 +10,31 @@
     if(current&&mode!=='password') {
       view.innerHTML=`<h2 id="account-view-title">PERFIL DO COMANDANTE</h2><p id="auth-name"></p><p id="auth-email"></p>
         <p class="account-copy">Sua conta está conectada. Escolha BATALHA ONLINE para jogar.</p>
+        <div class="profile-patent">PATENTE <strong id="profile-patent">—</strong></div>
+        <dl class="account-stats" id="profile-stats"><div><dt>Partidas</dt><dd>—</dd></div><div><dt>Vitórias</dt><dd>—</dd></div><div><dt>Derrotas</dt><dd>—</dd></div><div><dt>Empates</dt><dd>—</dd></div><div><dt>Sequência atual</dt><dd>—</dd></div><div><dt>Melhor sequência</dt><dd>—</dd></div><div><dt>Taxa de vitórias</dt><dd>—</dd></div><div><dt>Posição no ranking</dt><dd id="profile-ranking-position">—</dd></div></dl>
         <p class="coin-balance"><span aria-hidden="true">♛</span> COROAS <strong data-coin-balance>—</strong></p>
+        <p class="coin-balance">GEMAS <strong id="profile-gems">—</strong></p>
         <h3>HISTÓRICO DE COROAS</h3><ul class="coin-history" id="account-coin-history"></ul>
         <p role="status"></p><button class="account-button" data-auth="logout">SAIR DA CONTA</button>`;
       view.querySelector('#auth-name').textContent=current.user.user_metadata?.display_name||'Comandante';
       view.querySelector('#auth-email').textContent=current.user.email;
       const profileUser=current.user.id;
-      window.DominiusEconomy?.wallet().then(() => window.DominiusEconomy.history()).then(rows => {
+      DominiusCloud.rpc('dominius_my_stats').then(stats=>{
+        if(current?.user.id!==profileUser || !view.querySelector('#profile-stats') || !stats)return;
+        view.querySelector('#profile-patent').textContent=stats.patent;
+        const values=[stats.matches_played,stats.wins,stats.losses,stats.draws,stats.current_win_streak,stats.best_win_streak,`${stats.win_rate}%`];
+        view.querySelectorAll('#profile-stats dd').forEach((cell,i)=>cell.textContent=values[i]);
+      }).catch(error=>message(error.message));
+      DominiusCloud.rpc('dominius_ranking').then(data=>{
+        if(current?.user.id===profileUser && view.querySelector('#profile-ranking-position') && data?.me)
+          view.querySelector('#profile-ranking-position').textContent=`#${data.me.position}`;
+      }).catch(()=>{});
+      window.DominiusEconomy?.wallet().then(() => {
+        if(current?.user.id===profileUser && view.querySelector('#profile-gems'))view.querySelector('#profile-gems').textContent=window.DominiusEconomy.format(window.DominiusEconomy.gems);
+        return window.DominiusEconomy.history();
+      }).then(rows => {
         if(current?.user.id!==profileUser || !view.querySelector('#account-coin-history'))return;
-        const names={initial_balance:'Saldo inicial',online_win_reward:'Vitória online',wager_lock:'Aposta da batalha',wager_win:'Vitória em batalha',wager_refund:'Reembolso de batalha',admin_adjustment:'Ajuste'};
+        const names={initial_balance:'Saldo inicial',online_win_reward:'Vitória em Batalha Livre',wager_lock:'Aposta da batalha',wager_win:'Vitória em batalha',wager_refund:'Reembolso de batalha',admin_adjustment:'Ajuste'};
         const list=view.querySelector('#account-coin-history');list.replaceChildren();
         for(const row of rows){const li=document.createElement('li'),description=document.createElement('span'),date=document.createElement('time');
           const reference=row.metadata?.room_code?` · Sala ${row.metadata.room_code}`:row.match_id?` · Partida ${row.match_id.slice(0,8)}`:'';
@@ -80,6 +96,42 @@
   dialog.addEventListener('close',()=>view.querySelectorAll('[type="password"]').forEach(el=>el.value=''));
   document.querySelectorAll('[data-account-open]').forEach(el=>el.addEventListener('click',()=>open()));
   registerEntry?.addEventListener('click',()=>open('register'));
+  const rankingDialog=document.createElement('dialog');rankingDialog.id='ranking-dialog';rankingDialog.className='ranking-dialog';
+  rankingDialog.setAttribute('aria-labelledby','ranking-title');
+  rankingDialog.innerHTML='<button class="ranking-close" type="button" aria-label="Fechar ranking">×</button><p class="ranking-kicker">A GLÓRIA DOS REINOS</p><h2 id="ranking-title">RANKING DOS REINOS</h2><p class="ranking-subtitle">Os comandantes mais vitoriosos de DOMINIUS</p><div id="ranking-content" role="status" aria-live="polite"></div>';
+  document.body.append(rankingDialog);
+  rankingDialog.querySelector('.ranking-close').addEventListener('click',()=>rankingDialog.close());
+  function rankingRow(row,me){
+    const item=document.createElement('li');item.className=`ranking-row${me?' ranking-me':''}${row.position<=3?` ranking-place-${row.position}`:''}`;
+    const fields=[['position',`${row.position}º`],['name',row.name||'Comandante'],['patent',row.patent],
+      ['wins',row.wins],['losses',row.losses],['matches',row.matches_played],
+      ['streak',row.streak],['best',row.best_win_streak],['rate',`${row.win_rate}%`]];
+    for(const [key,value] of fields){const span=document.createElement('span');span.className=`ranking-${key}`;span.textContent=value;item.append(span);}
+    return item;
+  }
+  function rankingHead(){
+    const head=document.createElement('div');head.className='ranking-row ranking-head';
+    for(const [key,label] of [['position','POS'],['name','COMANDANTE'],['patent','PATENTE'],['wins','VITÓRIAS'],['losses','DERROTAS'],['matches','PARTIDAS'],['streak','SEQUÊNCIA'],['best','MELHOR'],['rate','TAXA']]){
+      const cell=document.createElement('span');cell.className=`ranking-${key}`;cell.textContent=label;head.append(cell);
+    }
+    return head;
+  }
+  async function openRanking(){
+    const content=rankingDialog.querySelector('#ranking-content');content.textContent='Carregando ranking…';
+    if(!rankingDialog.open)rankingDialog.showModal();
+    try{
+      const session=await DominiusCloud.session();
+      if(!session){content.replaceChildren();const prompt=document.createElement('p');prompt.textContent='Entre na sua conta para consultar o ranking.';
+        const login=document.createElement('button');login.type='button';login.textContent='ENTRAR';login.addEventListener('click',()=>{rankingDialog.close();open();});content.append(prompt,login);return;}
+      const data=await DominiusCloud.rpc('dominius_ranking');
+      if(!rankingDialog.open)return;
+      const list=document.createElement('ol');list.className='ranking-list';list.setAttribute('aria-label','Top 50 dos reinos');
+      for(const row of data.top)list.append(rankingRow(row,row.user_id===session.user.id));
+      content.replaceChildren(rankingHead(),list);
+      if(data.me && data.me.position>50){const label=document.createElement('p');label.className='ranking-own-label';label.textContent='SUA POSIÇÃO';const own=document.createElement('ol');own.className='ranking-list';own.append(rankingRow(data.me,true));content.append(label,own);}
+    }catch(error){content.textContent=DominiusCloud.errorMessage(error);}
+  }
+  document.getElementById('ranking-entry')?.addEventListener('click',openRanking);
   window.addEventListener('dominius-auth',event=>{
     current=event.detail.session;entry.textContent=current?'CONTA / PERFIL':'CONTA / ENTRAR';
     if(registerEntry){registerEntry.querySelector('span').textContent=current?'MEU PERFIL':'CRIAR CONTA';registerEntry.querySelector('small').textContent=current?'Gerencie sua conta online':'Crie seu comandante e prepare-se para batalhas online';}
