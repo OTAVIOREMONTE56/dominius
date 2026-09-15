@@ -48,7 +48,7 @@
   dialog.append(chat);
   const messages=q('online-messages'), input=q('online-message'), chatStatus=q('online-chat-status');
   let user=null,roomId=null,seat=null,last=null,draft=null,channel=null,heartbeat=null,fallback=null;
-  let epoch=0,busy=false,refreshRunning=false,refreshAgain=false,boardOpen=false,lastVersion=-1,lastChatId=0,lastVisualMoveId=0,chatBusy=false,pendingChat=null;
+  let epoch=0,busy=false,refreshRunning=false,refreshAgain=false,refreshTargetVersion=-1,refreshPromise=null,boardOpen=false,lastVersion=-1,lastChatId=0,lastVisualMoveId=0,chatBusy=false,pendingChat=null;
   let attaching=null,chatLoading=false,chatAgain=false,realtimeReady=false;
   let rewardMatchId=null,rewardToken=0,rewardTimer=null,rewardIntroTimer=null,rewardFinish=null;
   const storage={get:key=>{try{return sessionStorage.getItem(key);}catch{return null;}},set:(key,value)=>{try{sessionStorage.setItem(key,value);}catch{}},remove:key=>{try{sessionStorage.removeItem(key);}catch{}}};
@@ -308,10 +308,18 @@
       if(token===rewardToken){rewardMatchId=null;panel.classList.add('pot-visible');panel.querySelector('.online-reward-label').textContent=`Coroas indisponíveis: ${error.message}`;panel.querySelector('.online-reward-skip').hidden=true;economy.wallet().catch(()=>{});}
     }
   }
-  async function refresh() {
-    if(!roomId)return;
-    if(refreshRunning){refreshAgain=true;return;}
+  function refresh(targetVersion=null) {
+    if(!roomId)return Promise.resolve();
+    const requested=Number(targetVersion);
+    const versioned=Number.isInteger(requested)&&requested>=0;
+    if(versioned)refreshTargetVersion=Math.max(refreshTargetVersion,requested);
+    if(refreshRunning){
+      // matches, match_moves e a RPC podem anunciar a mesma versao.
+      if(!versioned)refreshAgain=true;
+      return refreshPromise;
+    }
     refreshRunning=true;const generation=epoch;
+    refreshPromise=(async()=>{
     try {
       do {
         refreshAgain=false;
@@ -321,9 +329,12 @@
         finally{if(window.DOMINIUS_PERF_DEBUG)window.dominiusPerf?.snapshotNetwork(performance.now()-networkStart,networkStart);}
         if(generation!==epoch)return;
         apply(snapshot);
-      }while(refreshAgain);
+        if(Number(snapshot?.match?.version)>=refreshTargetVersion)refreshTargetVersion=-1;
+      }while(refreshAgain||refreshTargetVersion>=0);
     }catch(error){if(generation===epoch)message(`Não foi possível sincronizar: ${error.message}`);}
-    finally{refreshRunning=false;if(generation!==epoch&&roomId)refresh();}
+    finally{refreshRunning=false;refreshPromise=null;if(generation!==epoch&&roomId)refresh();}
+    })();
+    return refreshPromise;
   }
   async function loadChat() {
     if(!roomId)return;
@@ -365,14 +376,25 @@
     roomId=id;storage.set(roomKey(),id);lastVersion=-1;lastVisualMoveId=0;
     const db=await cloud.client();if(generation!==epoch)return;
     const current=()=>generation===epoch&&roomId===id;
-    const changed=()=>{if(current()){if(window.DOMINIUS_PERF_DEBUG)window.dominiusPerf?.signal('realtime');refresh();}};
+    const changed=payload=>{if(current()){
+      if(window.DOMINIUS_PERF_DEBUG)window.dominiusPerf?.signal('realtime');
+      const row=payload?.new;
+      const target=Number.isInteger(row?.version)?row.version:Number.isInteger(row?.turn_number)?row.turn_number:null;
+      if(target!==null&&target<=Number(last?.match?.version))return;
+      refresh(target);
+    }};
+    const roomChanged=payload=>{
+      if(payload?.new?.status===last?.room?.status)return;
+      changed(payload);
+    };
     const chatted=()=>{if(current())loadChat();};
     scheduleFallback(false);
     channel=db.channel(`dominius:${id}:${user.id}`)
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'matches',filter:`room_id=eq.${id}`},changed)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'match_moves',filter:`room_id=eq.${id}`},changed)
-      .on('postgres_changes',{event:'*',schema:'public',table:'room_players',filter:`room_id=eq.${id}`},changed)
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'rooms',filter:`id=eq.${id}`},changed)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'room_players',filter:`room_id=eq.${id}`},changed)
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'room_players',filter:`room_id=eq.${id}`},changed)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'rooms',filter:`id=eq.${id}`},roomChanged)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages',filter:`room_id=eq.${id}`},chatted)
       .subscribe((result,error)=>{
         if(!current())return;
@@ -392,7 +414,7 @@
     els.endScreen.querySelector('.end-screen-visual')?.classList.remove('online-reward-no-art');
     clearInterval(heartbeat);clearInterval(fallback);
     const old=channel;channel=null;realtimeReady=false;chatAgain=false;
-    roomId=null;seat=null;last=null;draft=null;lastVersion=-1;lastChatId=0;lastVisualMoveId=0;boardOpen=false;refreshAgain=false;
+    roomId=null;seat=null;last=null;draft=null;lastVersion=-1;lastChatId=0;lastVisualMoveId=0;boardOpen=false;refreshAgain=false;refreshTargetVersion=-1;refreshPromise=null;
     toolbar.hidden=true;chat.hidden=true;messages.replaceChildren();input.value='';pendingChat=null;
     els.randomizeBtn.disabled=false;els.confirmArmyBtn.disabled=false;els.restartBtn.textContent='Reiniciar partida';
     actions.hidden=false;q('online-room-info').hidden=true;q('online-account').hidden=false;
@@ -503,7 +525,7 @@
         if(preparing) {
           const a=draft.find(p=>p.id===selected.id),b=draft.find(p=>p.x===x&&p.y===y);
           if(b)Object.assign(b,{x:a.x,y:a.y});Object.assign(a,{x,y});saveDraft();renderGame(true);
-        }else run(async()=>{await cloud.rpc('dominius_move',{p_room:roomId,p_piece:selected.id,p_x:x,p_y:y,p_version:last.match.version,p_request:crypto.randomUUID()});await refresh();});
+        }else run(async()=>{const targetVersion=last.match.version+1;await cloud.rpc('dominius_move',{p_room:roomId,p_piece:selected.id,p_x:x,p_y:y,p_version:last.match.version,p_request:crypto.randomUUID()});await refresh(targetVersion);});
       }else if(cell.piece?.playerIndex===seat){state.selectedPiece=cell.piece;state.validMoves=preparing?getSetupValidMoves(cell.piece):getValidMoves(cell.piece);render();}
       else{state.selectedPiece=null;state.validMoves=[];render();}
     }};

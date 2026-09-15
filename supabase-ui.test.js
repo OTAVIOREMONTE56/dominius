@@ -41,7 +41,17 @@ test('two DOM clients: local/BOT preserved, online preparation, chat, movement a
       const r=await execute(user.id,`select public.${name}(${values.map((v,i)=>'$'+(i+1)).join(',')}) as data`,values);
       if(name!=='dominius_snapshot') {
         const table=name==='dominius_chat'?'chat_messages':name==='dominius_move'?'match_moves':name==='dominius_heartbeat'?'room_players':'matches';
-        setTimeout(()=>subscriptions.forEach(s=>s.callbacks.filter(c=>c.filter.table===table).forEach(c=>c.callback())),0);
+        setTimeout(()=>subscriptions.forEach(s=>{
+          if(name==='dominius_move'){
+            const version=args.p_version+1;
+            s.callbacks.filter(c=>c.filter.table==='matches').forEach(c=>c.callback({new:{version}}));
+            s.callbacks.filter(c=>c.filter.table==='match_moves').forEach(c=>c.callback({new:{turn_number:version}}));
+          }else {
+            const event=table==='matches'||name==='dominius_heartbeat'?'UPDATE':'INSERT';
+            s.callbacks.filter(c=>c.filter.table===table&&(c.filter.event==='*'||c.filter.event===event))
+              .forEach(c=>c.callback({eventType:event,new:{}}));
+          }
+        }),0);
       }
       return r.rows[0].data;
     }};
@@ -81,7 +91,12 @@ test('two DOM clients: local/BOT preserved, online preparation, chat, movement a
     await until(()=>b.q('#online-messages').textContent.includes('<img'),'chat delivery');
     assert.equal(b.q('#online-messages img'),null,'untrusted text never becomes HTML');
     assert(a.w.eval('state.selectedPiece'),'chat preserves selection');
+    await queue;await new Promise(r=>setTimeout(r,20));
+    const snapshotsBeforeMove=[a.snapshots,b.snapshots];
     a.click('[data-x="0"][data-y="4"]');await until(()=>b.w.eval('state.currentTurn')===1,'turn synchronized');
+    await queue;await new Promise(r=>setTimeout(r,20));
+    assert.deepEqual([a.snapshots-snapshotsBeforeMove[0],b.snapshots-snapshotsBeforeMove[1]],[1,1],
+      'RPC e dois eventos Realtime da mesma versao exigem um snapshot por cliente');
     assert.equal(b.w.eval('state.board[4][0].piece.playerIndex'),0);
     // Authenticated rejoin from a fresh page restores confirmed pieces and history.
     const restored=await page(0);restored.click('#online-entry');await until(()=>restored.q('#online-notice').textContent.includes('Escolha'),'restore lobby');
