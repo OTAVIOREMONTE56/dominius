@@ -343,6 +343,8 @@ function medalIcon(piece) {
 const boardCells = new Map();
 const boardSnapshots = new Map();
 let boardReversed = null;
+// TESTE TEMPORARIO MOBILE: altere para true antes de renderizar para restaurar os retratos.
+if (typeof window.DOMINIUS_BOARD_PORTRAITS_ENABLED !== 'boolean') window.DOMINIUS_BOARD_PORTRAITS_ENABLED = false;
 
 function renderBoard() {
   if (visualMotion.freeze) return;
@@ -375,7 +377,7 @@ function renderBoard() {
     const signature = JSON.stringify([cell.blocked, selected, validMove?.type, origin, destination,
       piece?.id, piece?.playerIndex, piece?.factionKey, piece?.roleKey, piece?.rank,
       piece?.short, piece?.label, piece?.name, piece?.image, piece?.isTrap, piece?.isObjective,
-      piece && state.players[piece.playerIndex]?.faction, hidden]);
+       piece && state.players[piece.playerIndex]?.faction, hidden, window.DOMINIUS_BOARD_PORTRAITS_ENABLED]);
     const key = `${cell.x},${cell.y}`;
     if (rebuild || boardSnapshots.get(key) !== signature) dirty.push({ cell, key, signature, selected, validMove, origin, destination });
   }));
@@ -441,7 +443,8 @@ function renderBoard() {
           pieceEl.dataset.kind = cell.piece.isObjective ? 'objective' : cell.piece.isTrap ? 'trap' : 'warrior';
           pieceEl.setAttribute('aria-label', cell.piece.name);
           pieceEl.title = cell.piece.name;
-          const portraitImage = FACTIONS[pieceEl.dataset.faction]?.images[cell.piece.roleKey];
+          const portraitImage = window.DOMINIUS_BOARD_PORTRAITS_ENABLED
+            ? FACTIONS[pieceEl.dataset.faction]?.images[cell.piece.roleKey] : null;
 
           if (portraitImage) {
             pieceEl.classList.add('faction-portrait');
@@ -467,7 +470,8 @@ function renderBoard() {
             portraitViewport.appendChild(artwork);
             pieceEl.prepend(portraitViewport);
           } else {
-            pieceEl.style.setProperty('--piece-image', cell.piece.image ? `url("${cell.piece.image}")` : 'none');
+            pieceEl.style.setProperty('--piece-image', window.DOMINIUS_BOARD_PORTRAITS_ENABLED && cell.piece.image
+              ? `url("${cell.piece.image}")` : 'none');
             pieceEl.innerHTML = `
               ${medalIcon(cell.piece)}
               <span class="piece-name">

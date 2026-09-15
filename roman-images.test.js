@@ -10,6 +10,7 @@ test('Roman portraits map every role, preserve Caesar and never expose hidden id
   t.after(() => dom.window.close());
   const w = dom.window;
   w.matchMedia = () => ({ matches: true });
+  w.DOMINIUS_BOARD_PORTRAITS_ENABLED = true;
   for (const file of ['bot.js', 'game-rules.js', 'app.js']) {
     vm.runInContext(fs.readFileSync(file, 'utf8'), dom.getInternalVMContext());
   }

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { JSDOM } = require('jsdom');
 
-function game(t, width, height) {
+function game(t, width, height, portraits = true) {
   const dom = new JSDOM(fs.readFileSync('index.html', 'utf8'), { runScripts: 'outside-only' });
   t.after(() => dom.window.close());
   const w = dom.window;
@@ -12,6 +12,7 @@ function game(t, width, height) {
   Object.defineProperty(w, 'innerHeight', { configurable: true, value: height });
   w.matchMedia = () => ({ matches: true });
   w.audioManager = {};
+  w.DOMINIUS_BOARD_PORTRAITS_ENABLED = portraits;
   for (const file of ['bot.js', 'game-rules.js', 'app.js']) {
     vm.runInContext(fs.readFileSync(file, 'utf8'), dom.getInternalVMContext());
   }
@@ -26,6 +27,17 @@ function game(t, width, height) {
     renderBoard();`);
   return w;
 }
+
+test('temporary mobile test renders identifiable pieces without loading board portraits', t => {
+  const w = game(t, 390, 844, false);
+  const visible = w.document.querySelector('[data-x="2"][data-y="2"] .piece');
+  const hidden = w.document.querySelector('[data-x="4"][data-y="2"] .piece');
+  assert.equal(w.document.querySelectorAll('#board img.piece-art').length, 0);
+  assert(visible.querySelector('.medal-symbol'));
+  assert(visible.textContent.includes(w.attacker.short));
+  assert.equal(hidden.textContent.trim(), '?');
+  assert.equal(hidden.querySelector('img,svg'), null);
+});
 
 for (const [width, height] of [[390, 844], [1360, 768]]) {
   test(`movement updates only two cells and reuses portrait at ${width}x${height}`, t => {

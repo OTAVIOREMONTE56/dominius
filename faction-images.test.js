@@ -13,6 +13,7 @@ test('all remaining faction images map to their own roles and stay hidden until 
   t.after(() => dom.window.close());
   const w = dom.window;
   w.matchMedia = () => ({ matches: true });
+  w.DOMINIUS_BOARD_PORTRAITS_ENABLED = true;
   for (const file of ['bot.js', 'game-rules.js', 'app.js']) {
     vm.runInContext(fs.readFileSync(file, 'utf8'), dom.getInternalVMContext());
   }
